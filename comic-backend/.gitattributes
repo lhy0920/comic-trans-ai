@@ -1,0 +1,16 @@
+# 自动检测文本文件并规范化换行符为 LF
+* text=auto
+
+# 明确指定某些文件类型使用 LF
+*.json text eol=lf
+*.js text eol=lf
+*.ts text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.md text eol=lf
+
+# 二进制文件不需要转换
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary

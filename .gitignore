@@ -1,0 +1,34 @@
+﻿# 前端依赖
+comic-platform/node_modules/
+comic-platform/dist/
+comic-platform/build/
+
+# 后端依赖
+comic-backend/node_modules/
+comic-backend/dist/
+comic-backend/src/data/
+
+# 环境变量
+.env
+.env.local
+
+# 编辑器
+.vscode/
+.idea/
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 日志
+*.log
+logs/
+
+# 上传文件
+**/uploads/*
+!**/uploads/.gitkeep
+
+# 其他
+*.tmp
+*.temp
+

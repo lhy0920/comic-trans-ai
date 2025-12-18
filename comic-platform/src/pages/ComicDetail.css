@@ -1,0 +1,391 @@
+.comic-detail-page {
+  min-height: 100vh;
+  background: var(--gradient-soft);
+  padding-bottom: 100px;
+}
+
+/* 顶部导航 */
+.detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: var(--white);
+  box-shadow: var(--shadow-sm);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.detail-header h1 {
+  font-size: 1.1rem;
+  color: var(--text-primary);
+}
+
+.back-btn,
+.share-btn {
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: var(--light-blue);
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary-blue);
+  transition: all 0.3s ease;
+}
+
+.back-btn:hover,
+.share-btn:hover {
+  background: var(--primary-blue);
+  color: var(--white);
+}
+
+/* 漫画信息 */
+.comic-hero {
+  display: flex;
+  gap: 20px;
+  padding: 24px 20px;
+  background: var(--white);
+  margin: 16px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.hero-cover {
+  flex-shrink: 0;
+}
+
+.hero-cover img {
+  width: 120px;
+  height: 160px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.hero-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hero-info h2 {
+  font-size: 1.3rem;
+  color: var(--text-primary);
+  background: var(--gradient-main);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.author {
+  font-size: 0.9rem;
+  color: var(--primary-blue);
+}
+
+.hero-info .tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.hero-info .tag {
+  padding: 3px 10px;
+  background: var(--light-pink);
+  border-radius: 12px;
+  font-size: 0.7rem;
+  color: var(--primary-pink);
+}
+
+.hero-info .stats {
+  display: flex;
+  gap: 16px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: auto;
+}
+
+/* 简介 */
+.comic-desc {
+  padding: 16px 20px;
+  margin: 0 16px;
+  background: var(--white);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.comic-desc h3 {
+  font-size: 1rem;
+  color: var(--text-primary);
+  margin-bottom: 10px;
+}
+
+.comic-desc p {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* 操作按钮 */
+.action-buttons {
+  display: flex;
+  gap: 12px;
+  padding: 20px 16px;
+  margin: 0 16px;
+}
+
+.collect-btn,
+.read-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 14px;
+  border: none;
+  border-radius: 25px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.collect-btn {
+  background: var(--white);
+  color: var(--text-secondary);
+  border: 1px solid var(--light-pink);
+}
+
+.collect-btn:hover {
+  border-color: var(--primary-pink);
+  color: var(--primary-pink);
+}
+
+.collect-btn.collected {
+  background: var(--light-pink);
+  color: var(--primary-pink);
+  border-color: var(--primary-pink);
+}
+
+.read-btn {
+  background: var(--gradient-main);
+  color: var(--white);
+  box-shadow: 0 4px 12px rgba(255, 158, 181, 0.4);
+}
+
+.read-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(255, 158, 181, 0.5);
+}
+
+/* 章节列表 */
+.chapter-section {
+  padding: 0 16px;
+  margin: 0 16px;
+}
+
+.chapter-section .section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 0;
+}
+
+.chapter-section h3 {
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.chapter-count {
+  font-size: 0.85rem;
+  color: var(--primary-blue);
+}
+
+.chapter-list {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.chapter-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 8px;
+  background: var(--white);
+  border: 1px solid var(--light-pink);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.chapter-item:hover {
+  border-color: var(--primary-pink);
+  background: var(--light-pink);
+}
+
+.chapter-item.read {
+  opacity: 0.6;
+}
+
+.chapter-title {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+}
+
+.chapter-date {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+/* 响应式 */
+@media (min-width: 768px) {
+  .comic-hero {
+    margin: 24px 32px;
+    padding: 32px;
+  }
+
+  .hero-cover img {
+    width: 160px;
+    height: 220px;
+  }
+
+  .chapter-list {
+    grid-template-columns: repeat(6, 1fr);
+  }
+
+  .comic-desc,
+  .chapter-section {
+    margin: 0 32px;
+  }
+
+  .action-buttons {
+    margin: 0 32px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .comic-detail-page {
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+
+  .chapter-list {
+    grid-template-columns: repeat(8, 1fr);
+  }
+}
+
+@media (max-width: 374px) {
+  .chapter-list {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .hero-cover img {
+    width: 100px;
+    height: 140px;
+  }
+}
+
+
+/* PC端头部导航 */
+.pc-header {
+  display: none;
+}
+
+.pc-header .header-left {
+  display: flex;
+  align-items: center;
+}
+
+.pc-header .logo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 1.4rem;
+  font-weight: 700;
+  background: var(--gradient-main);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  cursor: pointer;
+}
+
+.pc-header .logo svg {
+  color: var(--primary-pink);
+}
+
+.pc-header .header-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pc-header .nav-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  border: none;
+  background: none;
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: 20px;
+  transition: all 0.3s ease;
+}
+
+.pc-header .nav-link:hover {
+  color: var(--primary-pink);
+  background: var(--light-pink);
+}
+
+.pc-header .header-right {
+  display: flex;
+  gap: 8px;
+}
+
+.pc-header .icon-btn {
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: var(--light-pink);
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary-pink);
+  transition: all 0.3s ease;
+}
+
+.pc-header .icon-btn:hover {
+  background: var(--primary-pink);
+  color: var(--white);
+}
+
+.pc-header .avatar-btn {
+  background: var(--gradient-main);
+  color: var(--white);
+}
+
+@media (min-width: 768px) {
+  .mobile-header {
+    display: none;
+  }
+
+  .pc-header {
+    display: flex;
+    padding: 16px 32px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .pc-header {
+    padding: 16px 48px;
+  }
+}
