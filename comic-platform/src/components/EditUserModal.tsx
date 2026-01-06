@@ -113,9 +113,15 @@ function EditUserModal({ user, onSave, onClose }: EditUserModalProps) {
               value={formData.username}
               onChange={e => handleChange('username', e.target.value)}
               placeholder="请输入用户名"
+              onBlur={
+                ()=>{
+
+                }
+              }
             />
+             {errors.username && <span style={{ color: '#ff6b6b', fontSize: '12px', marginTop: '-8px', marginBottom: '8px' }}>{errors.username}</span>}
           </div>
-          {errors.username && <span style={{ color: '#ff6b6b', fontSize: '12px', marginTop: '-8px', marginBottom: '8px' }}>{errors.username}</span>}
+         
 
           <div className="info-item">
             <span className="info-label">昵称</span>
@@ -126,8 +132,9 @@ function EditUserModal({ user, onSave, onClose }: EditUserModalProps) {
               onChange={e => handleChange('nickname', e.target.value)}
               placeholder="请输入昵称"
             />
+             {errors.nickname && <span style={{ color: '#ff6b6b', fontSize: '12px', marginTop: '-8px', marginBottom: '8px' }}>{errors.nickname}</span>}
           </div>
-          {errors.nickname && <span style={{ color: '#ff6b6b', fontSize: '12px', marginTop: '-8px', marginBottom: '8px' }}>{errors.nickname}</span>}
+         
 
           <div className="info-item">
             <span className="info-label">个性签名</span>
@@ -173,20 +180,24 @@ function EditUserModal({ user, onSave, onClose }: EditUserModalProps) {
               onChange={e => handleChange('phone', e.target.value)}
               placeholder="请输入手机号"
             />
+            {errors.phone && <span style={{ color: '#ff6b6b', fontSize: '12px', marginTop: '-8px', marginBottom: '8px' }}>{errors.phone}</span>}
           </div>
-          {errors.phone && <span style={{ color: '#ff6b6b', fontSize: '12px', marginTop: '-8px', marginBottom: '8px' }}>{errors.phone}</span>}
+          
 
           <div className="info-item">
             <span className="info-label">邮箱</span>
             <input
               type="email"
-              className={`edit-user-input ${errors.email ? 'error' : ''}`}
+              className={`edit-user-input-email ${errors.email ? 'error' : ''}`}
               value={formData.email}
+              
+              readOnly={true}
               onChange={e => handleChange('email', e.target.value)}
               placeholder="请输入邮箱"
             />
+             {errors.email && <span style={{ color: '#ff6b6b', fontSize: '12px', marginTop: '-8px', marginBottom: '8px' }}>{errors.email}</span>}
           </div>
-          {errors.email && <span style={{ color: '#ff6b6b', fontSize: '12px', marginTop: '-8px', marginBottom: '8px' }}>{errors.email}</span>}
+         
         </div>
 
         <div className="edit-user-btn">

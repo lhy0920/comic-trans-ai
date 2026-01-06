@@ -202,7 +202,7 @@
 }
 
 .image-item:hover {
-  transform: scale(1.03);
+  /* transform: scale(1.03); */
 }
 
 .image-item img {
@@ -1182,8 +1182,29 @@
 
 .folder-images {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+/* 虚拟滚动容器 */
+.folder-images-virtual {
+  width: 100%;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background: var(--light-pink);
+  padding: 4px;
+}
+
+/* Virtuoso Grid 样式 */
+.virtuoso-grid-list {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 8px;
+  padding: 4px;
+}
+
+.virtuoso-grid-item {
+  aspect-ratio: 3/4;
 }
 
 .folder-image-item {
@@ -1354,6 +1375,13 @@
   font-weight: bold;
   color: transparent;
   transition: all 0.2s;
+  cursor: pointer;
+  z-index: 5;
+}
+
+.select-checkbox:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(255, 158, 181, 0.4);
 }
 
 .select-checkbox.checked {
@@ -1361,9 +1389,31 @@
   color: white;
 }
 
+.select-checkbox.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  border-color: #ccc;
+}
+
+.select-checkbox.disabled:hover {
+  transform: none;
+  box-shadow: none;
+}
+
 /* 翻译按钮激活状态 */
 .translate-selected-btn.active {
   background: var(--primary-blue);
+}
+
+.translate-selected-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #ccc;
+}
+
+.translate-selected-btn:disabled:hover {
+  transform: none;
+  box-shadow: none;
 }
 
 /* 收藏夹内容头部 */
@@ -1483,7 +1533,50 @@
   font-weight: 500;
 }
 
-/* 翻译后图片预览 */
+/* 翻译后图片预览 - 支持多张 */
+.translated-images-preview {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 8px;
+  max-height: 250px;
+  overflow-y: auto;
+  border-radius: var(--radius-md);
+  margin-bottom: 12px;
+  padding: 8px;
+  background: var(--light-pink);
+}
+
+.translated-image-item {
+  position: relative;
+  aspect-ratio: 3/4;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid white;
+}
+
+.translated-image-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.translated-image-item .image-number {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  background: var(--gradient-main);
+  color: white;
+  border-radius: 50%;
+  font-size: 0.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
+/* 单张图片预览（兼容旧样式） */
 .translated-image-preview {
   max-height: 300px;
   overflow: auto;

@@ -10,6 +10,9 @@ import chatRoutes from './routes/chat'
 import translateRoutes from './routes/translate'
 import collectionRoutes from './routes/collection'
 import historyRoutes from './routes/history'
+import postRoutes from './routes/post'
+import followRoutes from './routes/follow'
+import shortlinkRoutes from './routes/shortlink'
 
 dotenv.config()
 
@@ -28,6 +31,11 @@ app.use('/api/chat', chatRoutes)
 app.use('/api/translate', translateRoutes)
 app.use('/api/collections', collectionRoutes)
 app.use('/api/history', historyRoutes)
+app.use('/api/posts', postRoutes)
+app.use('/api/follow', followRoutes)
+app.use('/api/shortlink', shortlinkRoutes)
+// 短链接重定向（放在API路由之后）
+app.use('/s', shortlinkRoutes)
 
 // 健康检查
 app.get('/api/health', (req, res) => {

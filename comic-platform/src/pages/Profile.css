@@ -297,6 +297,20 @@
   transition: all 0.3s ease;
   outline: none;
 }
+.edit-user-input-email {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1.5px solid rgba(126, 200, 227, 0.3);
+  border-radius: var(--radius-sm);
+  background: var(--light-blue);
+  font-size: 14px;
+  color: gray;
+  transition: all 0.3s ease;
+  outline: none;
+  background-color: #f5f5f5;
+  cursor: default;
+  
+}
 
 .edit-user-input::placeholder {
   color: rgba(113, 128, 150, 0.6);
@@ -485,9 +499,11 @@
   margin-bottom: 16px;
 }
 
-.user-avatar img {
+.profile-page .user-avatar img {
   width: 90px;
   height: 90px;
+  min-width: 90px;
+  min-height: 90px;
   border-radius: 50%;
   object-fit: cover;
   border: 3px solid var(--primary-pink);
@@ -550,7 +566,7 @@
 .user-name {
   font-size: 1.3rem;
   color: var(--text-primary);
-  margin-bottom: 8px;
+  
 }
 
 .user-signature {
@@ -785,14 +801,16 @@
     margin: 24px 0;
   }
 
-  .user-avatar {
+  .profile-page .user-avatar {
     margin-bottom: 0;
     flex-shrink: 0;
   }
 
-  .user-avatar img {
+  .profile-page .user-avatar img {
     width: 100px;
     height: 100px;
+    min-width: 100px;
+    min-height: 100px;
   }
 
   .user-info {
@@ -825,5 +843,56 @@
 
   .profile-header.pc-header {
     padding: 16px 48px;
+  }
+}
+
+
+/* 粉丝/关注统计 */
+.follow-stats {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 240px;
+  border-radius: var(--radius-sm);
+}
+
+.follow-stat-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.follow-stat-item:hover {
+  background: rgba(255, 158, 181, 0.3);
+}
+
+.follow-stat-item svg {
+  color: var(--primary-pink);
+}
+
+.follow-stat-num {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--primary-pink);
+}
+
+.follow-stat-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.follow-stat-divider {
+  width: 1px;
+  height: 20px;
+  background: rgba(255, 158, 181, 0.5);
+}
+
+@media (min-width: 768px) {
+  .follow-stats {
+    margin-top: 16px;
   }
 }

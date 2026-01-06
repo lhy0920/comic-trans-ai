@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom'
-import { Home as HomeIcon, BookOpen, Languages, User } from 'lucide-react'
+import { Home as HomeIcon, BookOpen, Languages, User,MessagesSquare } from 'lucide-react'
 import Header from './components/Header'
 import AuthGuard from './components/AuthGuard'
 import { ToastContainer } from './components/Toast'
@@ -15,6 +15,10 @@ const ComicReader = lazy(() => import('./pages/ComicReader'))
 const Profile = lazy(() => import('./pages/Profile'))
 const Login = lazy(() => import('./pages/Login'))
 const Register = lazy(() => import('./pages/Register'))
+const Community = lazy(() => import('./pages/community'))
+const PublishPost = lazy(() => import('./pages/PublishPost'))
+const Myposts = lazy(() => import('./pages/Myposts'))
+const FollowList = lazy(() => import('./pages/FollowList'))
 
 // 加载中组件
 const PageLoading = () => (
@@ -64,11 +68,26 @@ function App() {
           <Route path="/translate" element={
             <AuthGuard><Translate /></AuthGuard>
           } />
+          <Route path="/Community" element={
+            <AuthGuard><Community /></AuthGuard>
+          } />
+          <Route path="/publish-post" element={
+            <AuthGuard><PublishPost /></AuthGuard>
+          } />
           <Route path="/bookshelf" element={
             <AuthGuard><Bookshelf /></AuthGuard>
           } />
           <Route path="/profile" element={
             <AuthGuard><Profile /></AuthGuard>
+          } />
+          <Route path="/myposts" element={
+            <AuthGuard><Myposts /></AuthGuard>
+          } />
+          <Route path="/following/:userId?" element={
+            <AuthGuard><FollowList /></AuthGuard>
+          } />
+          <Route path="/followers/:userId?" element={
+            <AuthGuard><FollowList /></AuthGuard>
           } />
           <Route path="/comic/:id/read/:chapterId" element={
             <AuthGuard><ComicReader /></AuthGuard>
@@ -94,7 +113,13 @@ function App() {
             <Languages size={22} strokeWidth={1.5} />
             <span className="nav-text">翻译</span>
           </button>
-
+         <button
+            className={`nav-item ${location.pathname === '/community' ? 'active' : ''}`}
+            onClick={() => navigate('/community')}
+          >
+            <MessagesSquare size={22} strokeWidth={1.5} />
+            <span className="nav-text">社区</span>
+          </button>
           <button
             className={`nav-item ${location.pathname === '/bookshelf' ? 'active' : ''}`}
             onClick={() => navigate('/bookshelf')}

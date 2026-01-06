@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import {
   Upload,
   Languages,
@@ -11,6 +11,7 @@ import {
   FolderPlus,
   Folder,
 } from 'lucide-react'
+import { VirtuosoGrid } from 'react-virtuoso'
 
 import { translateApi, chatApi, type TextBlock } from '../services/api'
 import { chunkUpload, type UploadProgress } from '../utils/chunkUpload'
@@ -86,80 +87,8 @@ const getBlobUrl = (imageId: number, blob: Blob | null): string | null => {
   return url
 }
 
-// 使用 IntersectionObserver 的懒加载图片组件
-function LazyImage({ 
-  image, 
-  index, 
-  isSelected,
-  isSelectMode,
-  onImageClick,
-  onToggleSelect
-}: { 
-  image: StoredImage
-  index: number
-  isSelected: boolean
-  isSelectMode: boolean
-  onImageClick: (index: number) => void
-  onToggleSelect: (id: number) => void
-}) {
-  const [isVisible, setIsVisible] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-  
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsVisible(true)
-          observer.disconnect()
-        }
-      },
-      { rootMargin: '50px' }
-    )
-    
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [])
-  
-  const url = isVisible ? getBlobUrl(image.id, image.blob) : null
-  
-  const handleClick = () => {
-    if (isSelectMode) {
-      onToggleSelect(image.id)
-    } else {
-      onImageClick(index)
-    }
-  }
-  
-  return (
-    <div 
-      ref={ref}
-      className={`folder-image-item ${isSelected ? 'selected' : ''} ${isSelectMode ? 'select-mode' : ''}`}
-      onClick={handleClick}
-    >
-      {!isVisible ? (
-        <div className="image-placeholder">
-          <span>{index + 1}</span>
-        </div>
-      ) : url ? (
-        <img src={url} alt={`第${index + 1}张`} loading="lazy" decoding="async" />
-      ) : (
-        <div className="image-placeholder error">
-          <span>!</span>
-        </div>
-      )}
-      {image.status === 'done' && <span className="done-badge">✓</span>}
-      {/* 选择模式下显示选择框 */}
-      {isSelectMode && (
-        <span className={`select-checkbox ${isSelected ? 'checked' : ''}`}>
-          {isSelected && '✓'}
-        </span>
-      )}
-    </div>
-  )
-}
+// 最大可选图片数量
+const MAX_SELECT_COUNT = 8
 
 function Translate() {
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -178,19 +107,18 @@ function Translate() {
   const [editingFolder, setEditingFolder] = useState<{id: number, name: string} | null>(null)
   
   // 图片选择和翻译相关
-  const [isSelectMode, setIsSelectMode] = useState(false) // 是否处于选择模式
-  const [selectedImageIds, setSelectedImageIds] = useState<Set<number>>(new Set()) // 选中的图片ID集合
+  const [selectedImageIds, setSelectedImageIds] = useState<Record<number, boolean>>({}) // 选中的图片ID集合
   const [isTranslating, setIsTranslating] = useState(false)
   const [translateProgress, setTranslateProgress] = useState('')
-  const [translatedResult, setTranslatedResult] = useState<{
+  const [translatedResults, setTranslatedResults] = useState<Array<{
     imageId: number
     blob: Blob
     texts: Array<{original: string, translated: string, type: string}>
     summary: string
-  } | null>(null)
+  }>>([])
   const [showSaveModal, setShowSaveModal] = useState(false)
   const [saveTargetFolder, setSaveTargetFolder] = useState<number | null>(null)
-  const translateAbortRef = useRef<AbortController | null>(null)
+  const translateWorkerRef = useRef<Worker | null>(null)
 
   const [images, setImages] = useState<ComicImage[]>([])
   const [isDragging, setIsDragging] = useState(false)
@@ -274,12 +202,23 @@ function Translate() {
     loadFolders()
   }, [])
 
-  // 选中文件夹时加载图片
+  // 选中文件夹时加载图片，并清理旧缓存
   useEffect(() => {
     const loadFolderImages = async () => {
+      // 清理旧文件夹的 blob URLs
+      folderImages.forEach(img => {
+        const url = blobUrlCache.get(img.id)
+        if (url) {
+          URL.revokeObjectURL(url)
+          blobUrlCache.delete(img.id)
+        }
+      })
+      
       if (selectedFolder) {
         const imgs = await getImagesByFolder(selectedFolder)
         setFolderImages(imgs)
+        // 清空选中状态
+        setSelectedImageIds({})
       } else {
         setFolderImages([])
       }
@@ -450,107 +389,150 @@ function Translate() {
     return lines
   }
 
-  // 切换选择模式
-  const toggleSelectMode = () => {
-    if (isSelectMode) {
-      // 退出选择模式，清空选择
-      setIsSelectMode(false)
-      setSelectedImageIds(new Set())
-    } else {
-      setIsSelectMode(true)
-    }
-  }
-
-  // 切换图片选中状态（只能选择一张）
-  const toggleImageSelect = (id: number) => {
+  // 切换图片选中状态（最多选择8张）
+  const toggleImageSelect = useCallback((id: number) => {
     setSelectedImageIds(prev => {
-      if (prev.has(id)) {
-        // 取消选择
-        return new Set()
-      } else {
-        // 选择新图片（替换之前的选择）
-        return new Set([id])
+      const newState = { ...prev }
+      if (newState[id]) {
+        delete newState[id]
+      } else if (Object.keys(newState).length < MAX_SELECT_COUNT) {
+        newState[id] = true
       }
+      return newState
     })
-  }
+  }, [])
 
-  // 翻译选中的图片（目前只支持单张）
-  const handleTranslateSelected = async () => {
-    if (selectedImageIds.size === 0) return
+  // 获取选中数量
+  const selectedCount = Object.keys(selectedImageIds).length
+
+  // 事件委托：处理图片网格点击
+  const handleImageGridClick = useCallback((e: React.MouseEvent) => {
+    const target = e.target as HTMLElement
+    const imageItem = target.closest('[data-image-id]') as HTMLElement
+    if (!imageItem) return
     
-    // 取第一张选中的图片
-    const selectedId = Array.from(selectedImageIds)[0]
-    const image = folderImages.find(img => img.id === selectedId)
-    if (!image || !image.blob) return
+    const imageId = Number(imageItem.dataset.imageId)
+    const index = Number(imageItem.dataset.index)
+    const isCheckbox = target.closest('[data-action="checkbox"]')
+    
+    if (isCheckbox) {
+      // 点击勾选框 -> 切换选中
+      toggleImageSelect(imageId)
+    } else {
+      // 点击图片 -> 进入阅读模式
+      setViewerIndex(index)
+      setViewerOpen(true)
+    }
+  }, [toggleImageSelect])
+
+  // 翻译选中的图片（使用 Web Worker）
+  const handleTranslateSelected = async () => {
+    if (selectedCount === 0) return
+    
+    const selectedIds = Object.keys(selectedImageIds).map(Number)
+    const selectedImages = selectedIds
+      .map(id => folderImages.find(img => img.id === id))
+      .filter((img): img is StoredImage => !!img && !!img.blob)
+    
+    if (selectedImages.length === 0) return
     
     setIsTranslating(true)
-    setTranslateProgress('正在识别图片文字...')
-    translateAbortRef.current = new AbortController()
+    setTranslateProgress(`准备翻译 ${selectedImages.length} 张图片...`)
+    setTranslatedResults([])
     
-    try {
-      const formData = new FormData()
-      formData.append('image', image.blob, image.fileName)
-      formData.append('targetLang', targetLang)
-      
-      const response = await fetch('http://localhost:5000/api/translate/image', {
-        method: 'POST',
-        body: formData,
-        signal: translateAbortRef.current.signal
+    // 创建 Worker
+    const worker = new Worker(
+      new URL('../workers/translateWorker.ts', import.meta.url),
+      { type: 'module' }
+    )
+    translateWorkerRef.current = worker
+    
+    // 准备任务数据
+    const tasks: Array<{id: number, imageData: ArrayBuffer, fileName: string, targetLang: string}> = []
+    for (const img of selectedImages) {
+      const arrayBuffer = await img.blob.arrayBuffer()
+      tasks.push({
+        id: img.id,
+        imageData: arrayBuffer,
+        fileName: img.fileName,
+        targetLang,
       })
+    }
+    
+    // 监听 Worker 消息
+    worker.onmessage = async (e) => {
+      const { type, current, total, result } = e.data
       
-      const data = await response.json()
+      if (type === 'progress') {
+        setTranslateProgress(`正在翻译 ${current}/${total} 张图片...`)
+      }
       
-      if (data.success) {
-        setTranslateProgress('正在生成翻译图片...')
-        
-        // 将翻译文字渲染到图片上
-        const translatedBlob = await renderTranslatedImage(image.blob, data.texts || [])
-        
+      if (type === 'result' && result) {
+        if (result.success) {
+          // 找到原图并渲染翻译文字
+          const originalImage = selectedImages.find(img => img.id === result.id)
+          if (originalImage && originalImage.blob) {
+            try {
+              const translatedBlob = await renderTranslatedImage(originalImage.blob, result.texts || [])
+              setTranslatedResults(prev => [...prev, {
+                imageId: result.id,
+                blob: translatedBlob,
+                texts: result.texts || [],
+                summary: result.summary || ''
+              }])
+            } catch (err) {
+              console.error('渲染翻译图片失败:', err)
+            }
+          }
+        }
+      }
+      
+      if (type === 'complete') {
         setTranslateProgress('翻译完成！')
-        setTranslatedResult({
-          imageId: image.id,
-          blob: translatedBlob, // 使用渲染后的图片
-          texts: data.texts || [],
-          summary: data.summary || ''
-        })
-        // 显示保存弹窗
         setTimeout(() => {
           setIsTranslating(false)
           setShowSaveModal(true)
         }, 500)
-      } else {
-        throw new Error(data.error || '翻译失败')
+        worker.terminate()
+        translateWorkerRef.current = null
       }
-    } catch (error) {
-      if ((error as Error).name === 'AbortError') {
+      
+      if (type === 'cancelled') {
         setTranslateProgress('已取消')
-      } else {
-        setTranslateProgress(`翻译失败: ${(error as Error).message}`)
+        setTimeout(() => setIsTranslating(false), 500)
+        worker.terminate()
+        translateWorkerRef.current = null
       }
-      setTimeout(() => setIsTranslating(false), 1500)
     }
+    
+    // 发送任务给 Worker
+    worker.postMessage({ type: 'start', tasks })
   }
   
   // 取消翻译
   const cancelTranslate = () => {
-    translateAbortRef.current?.abort()
+    if (translateWorkerRef.current) {
+      translateWorkerRef.current.postMessage({ type: 'cancel' })
+    }
     setIsTranslating(false)
   }
   
   // 保存翻译结果到收藏夹
-  const saveTranslatedImage = async () => {
-    if (!translatedResult || !saveTargetFolder) return
+  const saveTranslatedImages = async () => {
+    if (translatedResults.length === 0 || !saveTargetFolder) return
     
-    const storedImage: StoredImage = {
-      id: Date.now(),
-      folderId: saveTargetFolder,
-      fileName: `translated_${translatedResult.imageId}.webp`,
-      blob: translatedResult.blob,
-      status: 'done',
-      createdAt: Date.now(),
+    for (const result of translatedResults) {
+      const storedImage: StoredImage = {
+        id: Date.now() + Math.random(),
+        folderId: saveTargetFolder,
+        fileName: `translated_${result.imageId}.webp`,
+        blob: result.blob,
+        status: 'done',
+        createdAt: Date.now(),
+      }
+      await saveImage(storedImage)
     }
     
-    await saveImage(storedImage)
     await updateFolderImageCount(saveTargetFolder)
     
     // 刷新收藏夹
@@ -569,10 +551,9 @@ function Translate() {
     }
     
     setShowSaveModal(false)
-    setTranslatedResult(null)
+    setTranslatedResults([])
     setSaveTargetFolder(null)
-    setSelectedImageIds(new Set())
-    setIsSelectMode(false)
+    setSelectedImageIds({})
   }
 
   // 右键菜单处理
@@ -1181,37 +1162,60 @@ function Translate() {
                     </span>
                   </h4>
                   <button 
-                    className={`translate-selected-btn ${isSelectMode ? 'active' : ''}`}
-                    onClick={isSelectMode && selectedImageIds.size > 0 ? handleTranslateSelected : toggleSelectMode}
+                    className={`translate-selected-btn ${selectedCount > 0 ? 'active' : ''}`}
+                    onClick={handleTranslateSelected}
+                    disabled={selectedCount === 0}
                   >
                     <Languages size={16} strokeWidth={1.5} />
-                    {isSelectMode 
-                      ? (selectedImageIds.size > 0 ? '翻译选中' : '取消选择')
-                      : '翻译'
-                    }
+                    翻译选中 ({selectedCount})
                   </button>
                 </div>
                 <p className="select-hint">
-                  {isSelectMode 
-                    ? (selectedImageIds.size > 0 ? '已选择 1 张图片，点击按钮开始翻译' : '点击选择一张图片进行翻译')
-                    : '点击图片进入阅读模式，点击"翻译"按钮选择图片翻译'
+                  {selectedCount > 0 
+                    ? `已选择 ${selectedCount} 张图片（最多 ${MAX_SELECT_COUNT} 张），点击按钮开始翻译`
+                    : `点击勾选框选择图片（最多 ${MAX_SELECT_COUNT} 张），点击图片进入阅读模式`
                   }
                 </p>
-                <div className="folder-images">
-                  {folderImages.map((img, index) => (
-                    <LazyImage
-                      key={img.id}
-                      image={img}
-                      index={index}
-                      isSelected={selectedImageIds.has(img.id)}
-                      isSelectMode={isSelectMode}
-                      onImageClick={(idx) => {
-                        setViewerIndex(idx)
-                        setViewerOpen(true)
-                      }}
-                      onToggleSelect={toggleImageSelect}
-                    />
-                  ))}
+                <div 
+                  className="folder-images-virtual"
+                  onClick={handleImageGridClick}
+                >
+                  <VirtuosoGrid
+                    style={{ height: Math.min(400, folderImages.length * 35) }}
+                    totalCount={folderImages.length}
+                    listClassName="virtuoso-grid-list"
+                    itemClassName="virtuoso-grid-item"
+                    itemContent={(index) => {
+                      const image = folderImages[index]
+                      if (!image) return null
+                      
+                      const isSelected = !!selectedImageIds[image.id]
+                      const url = getBlobUrl(image.id, image.blob)
+                      
+                      return (
+                        <div 
+                          data-image-id={image.id}
+                          data-index={index}
+                          className={`folder-image-item ${isSelected ? 'selected' : ''}`}
+                        >
+                          {url ? (
+                            <img src={url} alt={`第${index + 1}张`} loading="lazy" decoding="async" />
+                          ) : (
+                            <div className="image-placeholder">
+                              <span>{index + 1}</span>
+                            </div>
+                          )}
+                          {image.status === 'done' && <span className="done-badge">✓</span>}
+                          <span 
+                            className={`select-checkbox ${isSelected ? 'checked' : ''}`}
+                            data-action="checkbox"
+                          >
+                            {isSelected && '✓'}
+                          </span>
+                        </div>
+                      )
+                    }}
+                  />
                 </div>
               </div>
             )}
@@ -1244,26 +1248,33 @@ function Translate() {
       )}
 
       {/* 保存翻译结果弹窗 */}
-      {showSaveModal && translatedResult && (
+      {showSaveModal && translatedResults.length > 0 && (
         <>
           <div className="modal-overlay" onClick={() => setShowSaveModal(false)} />
           <div className="folder-modal translate-result-modal">
             <div className="modal-header">
-              <h3>翻译完成 ✨</h3>
+              <h3>翻译完成 ✨ ({translatedResults.length} 张)</h3>
               <button onClick={() => setShowSaveModal(false)}>
                 <X size={20} strokeWidth={1.5} />
               </button>
             </div>
             <div className="modal-body">
               {/* 翻译后图片预览 */}
-              <div className="translated-image-preview">
-                <img 
-                  src={URL.createObjectURL(translatedResult.blob)} 
-                  alt="翻译后的图片" 
-                />
+              <div className="translated-images-preview">
+                {translatedResults.map((result, index) => (
+                  <div key={result.imageId} className="translated-image-item">
+                    <img 
+                      src={URL.createObjectURL(result.blob)} 
+                      alt={`翻译后的图片 ${index + 1}`} 
+                    />
+                    <span className="image-number">{index + 1}</span>
+                  </div>
+                ))}
               </div>
               
-              <p className="summary-text">📖 {translatedResult.summary}</p>
+              {translatedResults.length === 1 && translatedResults[0].summary && (
+                <p className="summary-text">📖 {translatedResults[0].summary}</p>
+              )}
               
               {/* 选择保存位置 */}
               <p className="save-hint">选择保存到哪个收藏夹：</p>
@@ -1298,10 +1309,10 @@ function Translate() {
               </button>
               <button 
                 className="confirm-btn" 
-                onClick={saveTranslatedImage}
+                onClick={saveTranslatedImages}
                 disabled={!saveTargetFolder}
               >
-                {saveTargetFolder ? '保存到收藏夹' : '请选择收藏夹'}
+                {saveTargetFolder ? `保存 ${translatedResults.length} 张到收藏夹` : '请选择收藏夹'}
               </button>
             </div>
           </div>

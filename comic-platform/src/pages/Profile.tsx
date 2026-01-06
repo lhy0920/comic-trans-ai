@@ -14,8 +14,10 @@ import {
   Signature,
   UserRoundPen,
   Cake,
+  Users,
+  UserPlus,
 } from 'lucide-react'
-import { userApi, historyApi } from '../services/api'
+import { userApi, historyApi, followApi } from '../services/api'
 import { initFolderDB, getAllFolders, type StoredFolder } from '../utils/folderStorage'
 import PdfCover from '../components/PdfCover'
 import AvatarUpload from '../components/AvatarUpload'
@@ -57,6 +59,8 @@ function Profile() {
   const [activeSection, setActiveSection] = useState<string | null>(null)
   const [showAvatarUpload, setShowAvatarUpload] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
+  const [followingCount, setFollowingCount] = useState(0)
+  const [followersCount, setFollowersCount] = useState(0)
 
   // 从 localStorage 加载用户信息
   useEffect(() => {
@@ -82,6 +86,22 @@ function Profile() {
       }
     }
     loadHistory()
+  }, [])
+
+  // 加载关注/粉丝数量
+  useEffect(() => {
+    const loadFollowCount = async () => {
+      try {
+        const data = await followApi.getCount()
+        if (data.success) {
+          setFollowingCount(data.followingCount)
+          setFollowersCount(data.followersCount)
+        }
+      } catch (error) {
+        console.error('加载关注数量失败:', error)
+      }
+    }
+    loadFollowCount()
   }, [])
 
   // 加载翻译页面的收藏夹
@@ -153,7 +173,7 @@ function Profile() {
           user={{
             username: user.username,
             nickname: user.nickname,
-            signature: user.signature || '',
+            signature: user.signature || '这个人懒懒的，什么也不说',
             gender: user.gender || '',
             birthday: user.birthday || '',
             phone: user.phone || '',
@@ -173,7 +193,21 @@ function Profile() {
         </div>
         <div className="user-info">
           <h2 className="user-name">{user.nickname}</h2>
-          <p className="user-signature">{user.signature}</p>
+          <p className="user-signature">{user.signature || ""}</p>
+          {/* 粉丝/关注数量 */}
+          <div className="follow-stats">
+            <div className="follow-stat-item" onClick={() => navigate('/following')}>
+              <UserPlus size={16} strokeWidth={1.5} />
+              <span className="follow-stat-num">{followingCount}</span>
+              <span className="follow-stat-label">关注</span>
+            </div>
+            <div className="follow-stat-divider" />
+            <div className="follow-stat-item" onClick={() => navigate('/followers')}>
+              <Users size={16} strokeWidth={1.5} />
+              <span className="follow-stat-num">{followersCount}</span>
+              <span className="follow-stat-label">粉丝</span>
+            </div>
+          </div>
         </div>
         <div className='edit-user-info'>
           <button className='edit-userinfo' onClick={() => setShowEditModal(true)}>编辑用户信息</button>
@@ -188,7 +222,24 @@ function Profile() {
           onClose={() => setShowAvatarUpload(false)}
         />
       )}
-
+        {/* 我的空间 */}
+      <section className="profile-section">
+        <div
+          className="section-header clickable"
+          onClick={() => navigate('/myposts')}
+        >
+          <h3>
+            <UserCircle size={18} strokeWidth={1.5} />
+            我的发布
+          </h3>
+          <ChevronRight
+            size={18}
+            strokeWidth={1.5}
+            className={activeSection === 'info' ? 'rotated' : ''}
+          />
+        </div>
+        
+      </section>
       {/* 历史记录 */}
       <section className="profile-section">
         <div
@@ -355,8 +406,12 @@ function Profile() {
               <span>隐私设置</span>
               <ChevronRight size={16} strokeWidth={1.5} />
             </button>
-            <button className="settings-item">
+            <button className="settings-item" onClick={()=>navigate('/aboutus')}>
               <span>关于我们</span>
+              <ChevronRight size={16} strokeWidth={1.5} />
+            </button>
+            <button className="settings-item" onClick={()=>navigate('/useragreement')}>
+              <span>用户协议</span>
               <ChevronRight size={16} strokeWidth={1.5} />
             </button>
             <button className="settings-item logout" onClick={handleLogout}>

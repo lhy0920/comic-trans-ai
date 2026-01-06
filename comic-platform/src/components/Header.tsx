@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
   Sparkles,
-  Search,
+  Mail,
   User,
   Languages,
   BookOpen,
   LogOut,
+  MessagesSquare
 } from 'lucide-react'
 import './Header.css'
 
@@ -60,7 +61,13 @@ function Header() {
           <Languages size={16} strokeWidth={1.5} />
           翻译
         </button>
-        
+         <button
+          className={`nav-link ${isActive('/community') ? 'active' : ''}`}
+          onClick={() => navigate('/community')}
+        >
+          <MessagesSquare size={16} strokeWidth={1.5} />
+          社区
+        </button>
         <button
           className={`nav-link ${isActive('/bookshelf') ? 'active' : ''}`}
           onClick={() => navigate('/bookshelf')}
@@ -78,7 +85,7 @@ function Header() {
       </nav>
       <div className="header-right">
         <button className="icon-btn">
-          <Search size={20} strokeWidth={1.5} />
+          <Mail size={20} strokeWidth={1.5} />
         </button>
         {user ? (
           <div className="user-menu">

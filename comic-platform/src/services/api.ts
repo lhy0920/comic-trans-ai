@@ -155,6 +155,25 @@ export const userApi = {
     if (!res.ok) throw new Error(data.message || '上传失败')
     return data
   },
+
+  // 上传封面
+  uploadCover: async (file: File) => {
+    const formData = new FormData()
+    formData.append('cover', file)
+    
+    const token = localStorage.getItem('token')
+    const res = await fetch('http://localhost:5000/api/auth/cover', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    })
+    
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.message || '上传失败')
+    return data
+  },
 }
 
 /**
@@ -275,4 +294,200 @@ export const folderApi = {
   async createFolder(name: string): Promise<{ id: number; name: string }> {
     return { id: Date.now(), name }
   },
+}
+
+
+/**
+ * 帖子/社区 API
+ */
+export const postApi = {
+  // 获取帖子列表
+  getPosts: (page = 1, limit = 10, tab = 'all') => {
+    const params = new URLSearchParams({ 
+      page: String(page), 
+      limit: String(limit),
+      tab 
+    })
+    return request(`/posts?${params}`)
+  },
+
+  // 获取单个帖子详情
+  getPost: (id: string) => request(`/posts/${id}`),
+
+  // 发布帖子
+  createPost: async (content: string, images: File[], tags: string[], visibility: 'public' | 'followers' | 'private' = 'public') => {
+    const formData = new FormData()
+    formData.append('content', content)
+    formData.append('tags', JSON.stringify(tags))
+    formData.append('visibility', visibility)
+    images.forEach(img => formData.append('images', img))
+    
+    return request('/posts', {
+      method: 'POST',
+      body: formData,
+    })
+  },
+
+  // 删除帖子
+  deletePost: (id: string) => 
+    request(`/posts/${id}`, { method: 'DELETE' }),
+
+  // 点赞/取消点赞帖子
+  toggleLike: (id: string) => 
+    request(`/posts/${id}/like`, { method: 'POST' }),
+
+  // 收藏/取消收藏帖子
+  toggleStar: (id: string) => 
+    request(`/posts/${id}/star`, { method: 'POST' }),
+
+  // 分享帖子
+  sharePost: (id: string) => 
+    request(`/posts/${id}/share`, { method: 'POST' }),
+
+  // 获取帖子评论
+  getComments: (postId: string) => 
+    request(`/posts/${postId}/comments`),
+
+  // 发表评论
+  addComment: (postId: string, content: string, replyTo?: string) => 
+    request(`/posts/${postId}/comments`, {
+      method: 'POST',
+      body: JSON.stringify({ content, replyTo }),
+    }),
+
+  // 删除评论
+  deleteComment: (postId: string, commentId: string) => 
+    request(`/posts/${postId}/comments/${commentId}`, { method: 'DELETE' }),
+
+  // 点赞/取消点赞评论
+  toggleCommentLike: (postId: string, commentId: string) => 
+    request(`/posts/${postId}/comments/${commentId}/like`, { method: 'POST' }),
+
+  // 获取用户的帖子
+  getUserPosts: (userId: string, page = 1, limit = 10) => {
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) })
+    return request(`/posts/user/${userId}?${params}`)
+  },
+
+  // 获取收藏的帖子
+  getStarredPosts: (page = 1, limit = 10) => {
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) })
+    return request(`/posts/starred/list?${params}`)
+  },
+}
+
+
+/**
+ * 关注 API
+ */
+export const followApi = {
+  // 关注/取消关注
+  toggleFollow: (userId: string) =>
+    request(`/follow/${userId}`, { method: 'POST' }),
+
+  // 获取关注列表
+  getFollowing: (userId?: string, page = 1, limit = 20) => {
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) })
+    const path = userId ? `/follow/following/${userId}` : '/follow/following'
+    return request(`${path}?${params}`)
+  },
+
+  // 获取粉丝列表
+  getFollowers: (userId?: string, page = 1, limit = 20) => {
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) })
+    const path = userId ? `/follow/followers/${userId}` : '/follow/followers'
+    return request(`${path}?${params}`)
+  },
+
+  // 获取关注/粉丝数量
+  getCount: (userId?: string) => {
+    const path = userId ? `/follow/count/${userId}` : '/follow/count'
+    return request(path)
+  },
+
+  // 检查是否关注
+  checkFollow: (userId: string) =>
+    request(`/follow/check/${userId}`),
+}
+
+// 扩展 postApi
+export const myPostApi = {
+  // 获取我的帖子
+  getMyPosts: (page = 1, limit = 10) => {
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) })
+    return request(`/posts/my/list?${params}`)
+  },
+
+  // 修改帖子
+  updatePost: (id: string, content: string, tags: string[]) =>
+    request(`/posts/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ content, tags }),
+    }),
+
+  // 修改帖子（带图片）
+  updatePostWithImages: async (
+    id: string, 
+    content: string, 
+    tags: string[], 
+    visibility: 'public' | 'followers' | 'private',
+    newImages: File[],
+    existingImageUrls: string[]
+  ) => {
+    const formData = new FormData()
+    formData.append('content', content)
+    formData.append('tags', JSON.stringify(tags))
+    formData.append('visibility', visibility)
+    formData.append('existingImages', JSON.stringify(existingImageUrls))
+    newImages.forEach(img => formData.append('images', img))
+    
+    const token = localStorage.getItem('token')
+    const res = await fetch(`http://localhost:5000/api/posts/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    })
+    
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.message || '更新失败')
+    return data
+  },
+
+  // 更新帖子可见性
+  updateVisibility: (id: string, visibility: 'public' | 'followers' | 'private') =>
+    request(`/posts/${id}/visibility`, {
+      method: 'PUT',
+      body: JSON.stringify({ visibility }),
+    }),
+}
+
+/**
+ * 短链接 API
+ */
+export const shortLinkApi = {
+  // 创建短链接
+  create: (url: string) =>
+    request('/shortlink/create', {
+      method: 'POST',
+      body: JSON.stringify({ url }),
+    }),
+
+  // 批量创建短链接
+  batchCreate: (urls: string[]) =>
+    request('/shortlink/batch', {
+      method: 'POST',
+      body: JSON.stringify({ urls }),
+    }),
+
+  // 获取我的短链接列表
+  getMyLinks: (page = 1, limit = 20) => {
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) })
+    return request(`/shortlink/my?${params}`)
+  },
+
+  // 删除短链接
+  delete: (hash: string) =>
+    request(`/shortlink/${hash}`, { method: 'DELETE' }),
 }

@@ -1,0 +1,11 @@
+.linkify-link {
+    color: var(--primary-blue);
+    text-decoration: none;
+    word-break: break-all;
+    transition: all 0.2s;
+}
+
+.linkify-link:hover {
+    color: var(--primary-pink);
+    text-decoration: underline;
+}

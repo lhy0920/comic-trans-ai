@@ -1,0 +1,144 @@
+.follow-list-page {
+  min-height: 100vh;
+  background: var(--gradient-soft);
+}
+
+.follow-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: var(--white);
+  box-shadow: var(--shadow-sm);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.follow-header h1 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.follow-header .back-btn {
+  width: 40px;
+  height: 40px;
+  background: var(--light-pink);
+  border: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--primary-pink);
+  transition: all 0.3s;
+}
+
+.follow-header .back-btn:hover {
+  background: var(--primary-pink);
+  color: var(--white);
+}
+
+.follow-header .placeholder {
+  width: 40px;
+}
+
+.follow-content {
+  padding: 16px;
+}
+
+.user-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.user-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: var(--white);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.user-item .user-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.user-item .user-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.user-item .user-nickname {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.user-item .user-signature {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.follow-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  flex-shrink: 0;
+  background: var(--gradient-main);
+  color: var(--white);
+}
+
+.follow-btn:hover {
+  transform: scale(1.05);
+}
+
+.follow-btn.following {
+  background: var(--light-pink);
+  color: var(--text-secondary);
+}
+
+.follow-btn.following:hover {
+  background: #ffccd5;
+  color: var(--primary-pink);
+}
+
+.loading,
+.empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-secondary);
+}
+
+/* 响应式 */
+@media (min-width: 768px) {
+  .follow-list-page {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .user-item .user-avatar {
+    width: 56px;
+    height: 56px;
+  }
+}

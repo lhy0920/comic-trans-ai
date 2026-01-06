@@ -1,4 +1,4 @@
-import mongoose, { Document, Schema } from 'mongoose'
+import mongoose, { Document, Schema, Types } from 'mongoose'
 import bcrypt from 'bcryptjs'
 
 export interface IUser extends Document {
@@ -6,11 +6,14 @@ export interface IUser extends Document {
   email: string
   password: string
   avatar?: string
+  cover?: string // 个人主页封面
   nickname: string
   signature?: string
   gender?: string
   birthday?: string
   phone?: string
+  following: Types.ObjectId[] // 关注的人
+  followers: Types.ObjectId[] // 粉丝
   createdAt: Date
   comparePassword(password: string): Promise<boolean>
 }
@@ -20,11 +23,14 @@ const userSchema = new Schema<IUser>({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   avatar: { type: String, default: '' },
+  cover: { type: String, default: '' },
   nickname: { type: String, default: '私斋蒸鹅心' },
   signature: { type: String, default: '' },
   gender: { type: String, default: '' },
   birthday: { type: String, default: '' },
   phone: { type: String, default: '' },
+  following: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+  followers: [{ type: Schema.Types.ObjectId, ref: 'User' }],
   createdAt: { type: Date, default: Date.now }
 })
 

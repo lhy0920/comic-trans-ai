@@ -1,0 +1,39 @@
+{
+  "name": "comic-trans-ai",
+  "version": "1.0.0",
+  "description": "Comic Translation AI Monorepo",
+  "main": "index.js",
+  "private": true,
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "dev:backend": "turbo run dev --filter=comic-backend",
+    "dev:platform": "turbo run dev --filter=comic-platform",
+    "build": "turbo run build",
+    "build:backend": "turbo run build --filter=comic-backend",
+    "build:platform": "turbo run build --filter=comic-platform",
+    "lint": "turbo run lint",
+    "clean": "turbo run clean && rm -rf node_modules",
+    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,md,json}\"",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "setup": "pnpm install"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lhy0920/comic-trans-ai.git"
+  },
+  "keywords": ["comic", "translation", "ai", "monorepo"],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/lhy0920/comic-trans-ai/issues"
+  },
+  "homepage": "https://github.com/lhy0920/comic-trans-ai#readme",
+  "devDependencies": {
+    "turbo": "^2.3.0",
+    "prettier": "^3.2.5"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

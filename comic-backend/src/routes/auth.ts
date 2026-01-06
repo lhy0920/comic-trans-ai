@@ -115,6 +115,7 @@ router.post('/login', async (req: Request, res: Response) => {
     // 构建完整的头像 URL
     const baseUrl = process.env.BASE_URL || 'http://localhost:5000'
     const avatarUrl = user.avatar ? `${baseUrl}${user.avatar}` : ''
+    const coverUrl = user.cover ? `${baseUrl}${user.cover}` : ''
     
     res.json({ 
       token, 
@@ -124,6 +125,7 @@ router.post('/login', async (req: Request, res: Response) => {
         email, 
         nickname: user.nickname, 
         avatar: avatarUrl,
+        cover: coverUrl,
         signature: user.signature,
         gender: user.gender,
         birthday: user.birthday,
@@ -146,6 +148,7 @@ router.get('/me', auth, async (req: AuthRequest, res: Response) => {
     // 构建完整的头像 URL
     const baseUrl = process.env.BASE_URL || 'http://localhost:5000'
     const avatarUrl = user.avatar ? `${baseUrl}${user.avatar}` : ''
+    const coverUrl = user.cover ? `${baseUrl}${user.cover}` : ''
     
     res.json({
       id: user._id,
@@ -153,6 +156,7 @@ router.get('/me', auth, async (req: AuthRequest, res: Response) => {
       email: user.email,
       nickname: user.nickname,
       avatar: avatarUrl,
+      cover: coverUrl,
       signature: user.signature,
       gender: user.gender,
       birthday: user.birthday,
@@ -240,6 +244,29 @@ router.post('/avatar', auth, upload.single('avatar'), async (req: AuthRequest, r
     res.json({ avatar: avatarUrl, user })
   } catch (error) {
     res.status(500).json({ message: '上传头像失败', error })
+  }
+})
+
+// 上传封面
+router.post('/cover', auth, upload.single('cover'), async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: '请选择图片' })
+    }
+
+    const coverPath = `/uploads/${req.file.filename}`
+    const baseUrl = process.env.BASE_URL || 'http://localhost:5000'
+    const coverUrl = `${baseUrl}${coverPath}`
+    
+    const user = await User.findByIdAndUpdate(
+      req.userId,
+      { cover: coverPath },
+      { new: true }
+    ).select('-password')
+
+    res.json({ success: true, cover: coverUrl, user })
+  } catch (error) {
+    res.status(500).json({ message: '上传封面失败', error })
   }
 })
 
