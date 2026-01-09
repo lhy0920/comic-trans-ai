@@ -5,10 +5,12 @@ import { ArrowLeft, MoreHorizontal, Heart, MessageSquare, ExternalLink, Trash2, 
 import { myPostApi, postApi, followApi, userApi } from '../services/api'
 import toast from '../components/Toast'
 import LinkifyText from '../components/LinkifyText'
+import { DEFAULT_AVATAR } from '../constants/avatar'
 import '../components/LinkifyText.css'
 
 interface Post {
     id: string
+    title: string
     content: string
     images: string[]
     tags: string[]
@@ -109,6 +111,7 @@ function Myposts() {
             state: { 
                 editMode: true,
                 postId: post.id,
+                title: post.title,
                 content: post.content,
                 images: post.images,
                 tags: post.tags,
@@ -212,7 +215,7 @@ function Myposts() {
             {/* 用户信息 */}
             <div className="user-section">
                 <img 
-                    src={user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`} 
+                    src={user.avatar || DEFAULT_AVATAR} 
                     alt={user.nickname} 
                     className="user-avatar"
                 />
@@ -297,6 +300,7 @@ function Myposts() {
                                     )}
                                 </div>
                                 
+                                {post.title && <h3 className="post-title">{post.title}</h3>}
                                 <p className="post-content">
                                     <LinkifyText text={post.content} />
                                 </p>

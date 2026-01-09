@@ -14,6 +14,7 @@ export interface IComment {
 // 帖子接口
 export interface IPost extends Document {
   author: Types.ObjectId
+  title: string // 帖子标题
   content: string
   images: string[]
   tags: string[]
@@ -39,6 +40,7 @@ const commentSchema = new Schema<IComment>({
 // 帖子 Schema
 const postSchema = new Schema<IPost>({
   author: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  title: { type: String, required: true, maxlength: 100 },
   content: { type: String, required: true, maxlength: 1000 },
   images: [{ type: String }],
   tags: [{ type: String }],

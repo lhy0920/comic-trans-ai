@@ -93,7 +93,7 @@ function FollowList() {
                 <button className="back-btn" onClick={() => navigate(-1)}>
                     <ArrowLeft size={20} />
                 </button>
-                <h1>{isFollowing ? '关注' : '粉丝'}</h1>
+                <h1 style={{marginLeft:'60px'}}>{isFollowing ? '关注列表' : '粉丝列表'}</h1>
                 <div className="placeholder" />
             </header>
 

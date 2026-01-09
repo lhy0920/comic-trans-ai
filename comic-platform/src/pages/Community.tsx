@@ -1,10 +1,13 @@
 import "./Community.css"
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ExternalLink, Pen, Heart, Star, StarOff, MessageSquareMore, Send, X, ArrowUp, RefreshCw } from "lucide-react"
-import { postApi } from '../services/api'
+import { ExternalLink, Pen, Heart, Star, StarOff, MessageSquareMore, Send, X, ArrowUp, RefreshCw, Copy, Link2, Share2, MessageCircle, Flag } from "lucide-react"
+import { postApi, shortLinkApi, reportApi } from '../services/api'
+import {  followApi } from '../services/api'
 import toast from '../components/Toast'
 import LinkifyText from '../components/LinkifyText'
+import ReportModal from '../components/ReportModal'
+import { DEFAULT_AVATAR } from '../constants/avatar'
 import '../components/LinkifyText.css'
 
 interface Comment {
@@ -30,6 +33,7 @@ interface Post {
         nickname: string
         avatar: string
     }
+    title: string
     content: string
     images: string[]
     tags: string[]
@@ -62,6 +66,11 @@ function Community() {
     const [replyTo, setReplyTo] = useState<ReplyState | null>(null)
     const [showBackTop, setShowBackTop] = useState(false)
     const [announcementModal, setAnnouncementModal] = useState<{ title: string; content: string } | null>(null)
+    const [isFollowing, setIsFollowing] = useState(false)
+    const [shareModal, setShareModal] = useState<Post | null>(null)
+    const [shareLink, setShareLink] = useState('')
+    const [isGeneratingLink, setIsGeneratingLink] = useState(false)
+    const [reportModal, setReportModal] = useState<{ postId: string; title: string } | null>(null)
     
     const inputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({})
     const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -159,21 +168,131 @@ function Community() {
         }
     }
 
-    // 分享帖子
-    const handleShare = async (postId: string) => {
+    // 分享帖子 - 打开分享弹窗
+    const handleShare = async (post: Post) => {
+        setShareModal(post)
+        setShareLink('')
+        setIsGeneratingLink(true)
+        
         try {
-            const data = await postApi.sharePost(postId)
+            // 生成帖子详情页的短链接
+            const postUrl = `${window.location.origin}/post/${post.id}`
+            const data = await shortLinkApi.create(postUrl)
             if (data.success) {
-                setPosts(posts.map(post => 
-                    post.id === postId 
-                        ? { ...post, shares: data.shares }
-                        : post
-                ))
-                toast.success('分享成功')
+                setShareLink(data.shortUrl)
+            } else {
+                setShareLink(postUrl) // 失败时使用原链接
             }
         } catch (error) {
-            toast.error('分享失败')
+            console.error('生成短链接失败:', error)
+            setShareLink(`${window.location.origin}/post/${post.id}`)
+        } finally {
+            setIsGeneratingLink(false)
         }
+    }
+
+    // 使用 Web Share API 分享
+    const handleWebShare = async () => {
+        if (!shareModal) return
+        
+        const shareData = {
+            title: shareModal.title || '来自漫译社区的分享',
+            text: shareModal.content.slice(0, 100) + (shareModal.content.length > 100 ? '...' : ''),
+            url: shareLink
+        }
+
+        if (navigator.share && navigator.canShare(shareData)) {
+            try {
+                await navigator.share(shareData)
+                // 更新分享计数
+                const data = await postApi.sharePost(shareModal.id)
+                if (data.success) {
+                    setPosts(posts.map(p => 
+                        p.id === shareModal.id ? { ...p, shares: data.shares } : p
+                    ))
+                }
+                toast.success('分享成功')
+                setShareModal(null)
+            } catch (error) {
+                if ((error as Error).name !== 'AbortError') {
+                    toast.error('分享失败')
+                }
+            }
+        } else {
+            toast.warning('当前浏览器不支持系统分享')
+        }
+    }
+
+    // 复制链接
+    const handleCopyLink = async () => {
+        try {
+            await navigator.clipboard.writeText(shareLink)
+            toast.success('链接已复制')
+            // 更新分享计数
+            if (shareModal) {
+                const data = await postApi.sharePost(shareModal.id)
+                if (data.success) {
+                    setPosts(posts.map(p => 
+                        p.id === shareModal.id ? { ...p, shares: data.shares } : p
+                    ))
+                }
+            }
+        } catch (error) {
+            toast.error('复制失败')
+        }
+    }
+
+    // 分享到 QQ
+    const handleShareToQQ = () => {
+        if (!shareModal) return
+        const title = encodeURIComponent(shareModal.title || '来自漫译社区的分享')
+        const summary = encodeURIComponent(shareModal.content.slice(0, 100))
+        const url = encodeURIComponent(shareLink)
+        const pic = shareModal.images[0] ? encodeURIComponent(shareModal.images[0]) : ''
+        
+        window.open(
+            `https://connect.qq.com/widget/shareqq/index.html?url=${url}&title=${title}&summary=${summary}&pics=${pic}`,
+            '_blank',
+            'width=600,height=500'
+        )
+        
+        // 更新分享计数
+        postApi.sharePost(shareModal.id).then(data => {
+            if (data.success) {
+                setPosts(posts.map(p => 
+                    p.id === shareModal.id ? { ...p, shares: data.shares } : p
+                ))
+            }
+        })
+    }
+
+    // 分享到微信（生成二维码提示）
+    const handleShareToWeChat = () => {
+        toast.info('请使用微信扫描二维码或复制链接分享')
+        handleCopyLink()
+    }
+
+    // 分享到微博
+    const handleShareToWeibo = () => {
+        if (!shareModal) return
+        const title = encodeURIComponent(`${shareModal.title || ''} ${shareModal.content.slice(0, 100)}`)
+        const url = encodeURIComponent(shareLink)
+        const pic = shareModal.images[0] ? encodeURIComponent(shareModal.images[0]) : ''
+        
+        window.open(
+            `https://service.weibo.com/share/share.php?url=${url}&title=${title}&pic=${pic}`,
+            '_blank',
+            'width=600,height=500'
+        )
+        
+        // 更新分享计数
+        postApi.sharePost(shareModal.id).then(data => {
+            if (data.success) {
+                setPosts(posts.map(p => 
+                    p.id === shareModal.id ? { ...p, shares: data.shares } : p
+                ))
+            }
+        })
     }
 
     // 切换评论展开
@@ -261,8 +380,33 @@ function Community() {
             inputRefs.current[postId]?.focus()
         }, 0)
     }
-
+    // 关注/取消关注
+    const handleToggleFollow = async (userId:string) => {
+            if (!userId) return
+            
+            try {
+                const data = await followApi.toggleFollow(userId)
+                if (data.success) {
+                    setIsFollowing(!data.isFollowing)
+                    toast.success(data.isFollowing ? '关注成功' : '已取消关注')
+                }
+            } catch (error) {
+                toast.error('操作失败')
+            }
+        }
     const cancelReply = () => setReplyTo(null)
+
+    // 举报帖子
+    const handleReportPost = async (reason: string, description: string) => {
+        if (!reportModal) return
+        try {
+            await reportApi.reportPost(reportModal.postId, reason, description)
+            toast.success('举报已提交，我们会尽快处理')
+        } catch (error) {
+            toast.error('举报失败，请稍后重试')
+            throw error
+        }
+    }
 
     const handleCommentInput = (postId: string, value: string) => {
         setCommentInputs({ ...commentInputs, [postId]: value })
@@ -282,7 +426,7 @@ function Community() {
             id: 1,
             icon: '🎉',
             title: '新年活动进行中！发帖参与抽奖~',
-            content: `🎊 新年特别活动 🎊\n\n活动时间：2026年1月1日 - 1月31日\n\n活动规则：\n1. 活动期间发布原创帖子即可参与抽奖\n2. 帖子内容需与漫画、动漫相关\n3. 每位用户每天最多3次抽奖机会\n\n奖品设置：\n🥇 一等奖：限量版漫画周边礼盒 x 3\n🥈 二等奖：热门漫画单行本 x 10\n🥉 三等奖：社区专属头像框 x 50\n\n快来参与吧！`
+            content: `🎊 新年特别活动 🎊\n\n活动时间：2026年1月1日 - 1月31日\n\n活动规则：\n1. 活动期间发布原创帖子即可参与抽奖\n2. 帖子内容需与漫画、动漫相关\n3. 每位用户每天最多3次抽奖机会\n\n奖品设置：\n🥇 一等奖：没想好\n🥈 二等奖：也没想好\n🥉 三等奖：社区专属头像框（还在制作ing）\n\n快来参与吧！`
         },
         {
             id: 2,
@@ -298,6 +442,7 @@ function Community() {
             <aside className="community-sidebar left-sidebar">
                 <div className="sidebar-section">
                     <h3 className="sidebar-title">🔥 热门话题</h3>
+                    <span>以下数据模拟（功能未开发）</span>
                     <ul className="hot-topics">
                         {hotTopics.map((topic, index) => (
                             <li key={topic.id} className="topic-item">
@@ -358,19 +503,21 @@ function Community() {
                             <article className="post-card" key={post.id}>
                                 <div className="post-header">
                                     <img 
-                                        src={post.author.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${post.author.username}`} 
+                                        src={post.author.avatar || DEFAULT_AVATAR} 
                                         alt={post.author.nickname} 
-                                        className="post-avatar" 
+                                        className="post-avatar clickable" 
+                                        onClick={() => navigate(`/user/${post.author.id}`)}
                                     />
-                                    <div className="post-user-info">
+                                    <div className="post-user-info" onClick={() => navigate(`/user/${post.author.id}`)}>
                                         <span className="post-username">{post.author.nickname || post.author.username}</span>
                                         <span className="post-date">{post.time}</span>
                                     </div>
-                                     {currentUserId && currentUserId !== post.author.id && <button className="post-follow-btn">+ 关注</button>}
+                                     {currentUserId && currentUserId !== post.author.id && <button className="post-follow-btn" onClick={()=>handleToggleFollow(post.author.id)}>{isFollowing? '+关注' : "已关注"}</button>}
                                 </div>
                                 
                                 
                                 <div className="post-content">
+                                    {post.title && <h3 className="post-title">{post.title}</h3>}
                                     <p className="post-text">
                                         <LinkifyText text={post.content} />
                                     </p>
@@ -411,7 +558,7 @@ function Community() {
                                         <MessageSquareMore size={18} strokeWidth={1.5} />
                                         <span className="action-count">{post.commentsCount}</span>
                                     </button>
-                                    <button className="action-btn" onClick={() => handleShare(post.id)}>
+                                    <button className="action-btn" onClick={() => handleShare(post)}>
                                         <ExternalLink size={18} strokeWidth={1.5} />
                                         <span className="action-count">{post.shares}</span>
                                     </button>
@@ -421,6 +568,15 @@ function Community() {
                                     >
                                         {post.isStarred ? <Star size={18} strokeWidth={1.5} fill="currentColor" /> : <StarOff size={18} strokeWidth={1.5} />}
                                     </button>
+                                    {currentUserId && currentUserId !== post.author.id && (
+                                        <button 
+                                            className="action-btn report-btn"
+                                            onClick={() => setReportModal({ postId: post.id, title: post.title || post.content.slice(0, 20) })}
+                                            title="举报"
+                                        >
+                                            <Flag size={18} strokeWidth={1.5} />
+                                        </button>
+                                    )}
                                 </div>
 
                                 {/* 评论区 */}
@@ -450,6 +606,7 @@ function Community() {
                                                     value={commentInputs[post.id] || ''}
                                                     onChange={(e) => handleCommentInput(post.id, e.target.value)}
                                                     onKeyDown={(e) => e.key === 'Enter' && handleSubmitComment(post.id)}
+                                                    onClick={() => navigate(`/user/${post.id}`)}
                                                 />
                                                 <button 
                                                     className="comment-submit-btn"
@@ -468,9 +625,11 @@ function Community() {
                                                 post.comments.map(comment => (
                                                     <div key={comment.id} className="comment-item">
                                                         <img 
-                                                            src={comment.author.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${comment.author.username}`} 
+                                                            src={comment.author.avatar || DEFAULT_AVATAR} 
                                                             alt={comment.author.nickname} 
                                                             className="comment-avatar" 
+                                                            onClick={() => navigate(`/user/${comment.author.id}`)}
+                                                            
                                                         />
                                                         <div className="comment-body">
                                                             <div className="comment-header">
@@ -550,6 +709,71 @@ function Community() {
                 </div>
             )}
 
+            {/* 分享弹窗 */}
+            {shareModal && (
+                <div className="share-modal-overlay" onClick={() => setShareModal(null)}>
+                    <div className="share-modal" onClick={e => e.stopPropagation()}>
+                        <div className="share-modal-header">
+                            <h3>分享帖子</h3>
+                            <button className="modal-close-btn" onClick={() => setShareModal(null)}>
+                                <X size={18} strokeWidth={1.5} />
+                            </button>
+                        </div>
+                        
+                        <div className="share-preview">
+                            <h4>{shareModal.title || '无标题'}</h4>
+                            <p>{shareModal.content.slice(0, 80)}{shareModal.content.length > 80 ? '...' : ''}</p>
+                        </div>
+
+                        <div className="share-link-section">
+                            <div className="share-link-box">
+                                <Link2 size={16} />
+                                <span className="share-link-text">
+                                    {isGeneratingLink ? '生成链接中...' : shareLink}
+                                </span>
+                                <button 
+                                    className="copy-link-btn" 
+                                    onClick={handleCopyLink}
+                                    disabled={isGeneratingLink}
+                                >
+                                    <Copy size={14} />
+                                    复制
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="share-platforms">
+                            <button className="share-platform-btn" onClick={handleWebShare}>
+                                <div className="platform-icon system-icon">
+                                    <Share2 size={20} strokeWidth={1.5} />
+                                </div>
+                                <span>系统分享</span>
+                            </button>
+                            <button className="share-platform-btn" onClick={handleShareToQQ}>
+                                <div className="platform-icon qq-icon">
+                                    <MessageCircle size={20} strokeWidth={1.5} />
+                                </div>
+                                <span>QQ</span>
+                            </button>
+                            <button className="share-platform-btn" onClick={handleShareToWeChat}>
+                                <div className="platform-icon wechat-icon">
+                                    <MessageCircle size={20} strokeWidth={1.5} />
+                                </div>
+                                <span>微信</span>
+                            </button>
+                            <button className="share-platform-btn" onClick={handleShareToWeibo}>
+                                <div className="platform-icon weibo-icon">
+                                    <MessageCircle size={20} strokeWidth={1.5} />
+                                </div>
+                                <span>微博</span>
+                            </button>
+                        </div>
+
+                        <p className="share-tip">点击系统分享可唤起更多分享选项</p>
+                    </div>
+                </div>
+            )}
+
             {/* 回到顶部 */}
             <button 
                 className={`back-to-top ${showBackTop ? 'show' : ''}`}
@@ -558,6 +782,17 @@ function Community() {
             >
                 <ArrowUp size={20} strokeWidth={2} />
             </button>
+
+            {/* 举报弹窗 */}
+            {reportModal && (
+                <ReportModal
+                    type="post"
+                    targetId={reportModal.postId}
+                    targetName={reportModal.title}
+                    onClose={() => setReportModal(null)}
+                    onSubmit={handleReportPost}
+                />
+            )}
         </div>
     )
 }

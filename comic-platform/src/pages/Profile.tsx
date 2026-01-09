@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   User,
   Settings,
-  FolderHeart,
+  Star,
   History,
   ChevronRight,
   Mail,
@@ -16,13 +16,17 @@ import {
   Cake,
   Users,
   UserPlus,
+  StickyNote,
+  UserX,
+  KeyRound,
 } from 'lucide-react'
-import { userApi, historyApi, followApi } from '../services/api'
-import { initFolderDB, getAllFolders, type StoredFolder } from '../utils/folderStorage'
+import { userApi, historyApi, followApi, authApi } from '../services/api'
 import PdfCover from '../components/PdfCover'
 import AvatarUpload from '../components/AvatarUpload'
 import EditUserModal, { type UserFormData } from '../components/EditUserModal'
+import ConfirmModal from '../components/ConfirmModal'
 import toast from '../components/Toast'
+import { DEFAULT_AVATAR } from '../constants/avatar'
 import './Profile.css'
 
 interface UserInfo {
@@ -45,22 +49,27 @@ interface HistoryItem {
   time: string
 }
 
-interface FolderItem {
-  id: number
-  name: string
-  imageCount: number
-}
-
 function Profile() {
   const navigate = useNavigate()
   const [user, setUser] = useState<UserInfo | null>(null)
-  const [folders, setFolders] = useState<FolderItem[]>([])
   const [history, setHistory] = useState<HistoryItem[]>([])
   const [activeSection, setActiveSection] = useState<string | null>(null)
   const [showAvatarUpload, setShowAvatarUpload] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [followingCount, setFollowingCount] = useState(0)
   const [followersCount, setFollowersCount] = useState(0)
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showChangeEmail, setShowChangeEmail] = useState(false)
+  const [showChangePassword, setShowChangePassword] = useState(false)
+  const [newEmail, setNewEmail] = useState('')
+  const [emailCode, setEmailCode] = useState('')
+  const [passwordCode, setPasswordCode] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [sendingCode, setSendingCode] = useState(false)
+  const [countdown, setCountdown] = useState(0)
+  const [passwordCountdown, setPasswordCountdown] = useState(0)
 
   // 从 localStorage 加载用户信息
   useEffect(() => {
@@ -104,24 +113,6 @@ function Profile() {
     loadFollowCount()
   }, [])
 
-  // 加载翻译页面的收藏夹
-  useEffect(() => {
-    const loadFolders = async () => {
-      try {
-        await initFolderDB()
-        const storedFolders = await getAllFolders()
-        setFolders(storedFolders.map((f: StoredFolder) => ({
-          id: f.id,
-          name: f.name,
-          imageCount: f.imageCount
-        })))
-      } catch (error) {
-        console.error('加载收藏夹失败:', error)
-      }
-    }
-    loadFolders()
-  }, [])
-
   // 保存用户信息
   const handleSaveProfile = async (formData: UserFormData) => {
     try {
@@ -160,13 +151,225 @@ function Profile() {
   const handleLogout = () => {
     localStorage.removeItem('token')
     localStorage.removeItem('user')
+    setShowLogoutConfirm(false)
     navigate('/login')
+  }
+
+  // 注销账户
+  const handleDeleteAccount = async () => {
+    try {
+      await authApi.deleteAccount()
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+      toast.success('账户已注销')
+      navigate('/login')
+    } catch (error) {
+      toast.error('注销失败，请稍后重试')
+    }
+  }
+
+  // 发送验证码（修改邮箱用）
+  const handleSendCode = async () => {
+    if (!newEmail || sendingCode) return
+    try {
+      setSendingCode(true)
+      await authApi.sendCode(newEmail)
+      toast.success('验证码已发送')
+      setCountdown(60)
+      const timer = setInterval(() => {
+        setCountdown(prev => {
+          if (prev <= 1) {
+            clearInterval(timer)
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1000)
+    } catch (error) {
+      toast.error('发送失败')
+    } finally {
+      setSendingCode(false)
+    }
+  }
+
+  // 发送验证码（修改密码用，发送到当前邮箱）
+  const handleSendPasswordCode = async () => {
+    if (!user?.email || passwordCountdown > 0) return
+    try {
+      await authApi.sendCode(user.email)
+      toast.success('验证码已发送到您的邮箱')
+      setPasswordCountdown(60)
+      const timer = setInterval(() => {
+        setPasswordCountdown(prev => {
+          if (prev <= 1) {
+            clearInterval(timer)
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1000)
+    } catch (error) {
+      toast.error('发送失败')
+    }
+  }
+
+  // 修改邮箱
+  const handleChangeEmail = async () => {
+    if (!newEmail || !emailCode) {
+      toast.error('请填写完整信息')
+      return
+    }
+    try {
+      await authApi.changeEmail(newEmail, emailCode)
+      const newUser = { ...user!, email: newEmail }
+      setUser(newUser)
+      localStorage.setItem('user', JSON.stringify(newUser))
+      setShowChangeEmail(false)
+      setNewEmail('')
+      setEmailCode('')
+      toast.success('邮箱修改成功')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '修改失败')
+    }
+  }
+
+  // 修改密码
+  const handleChangePassword = async () => {
+    if (!passwordCode || !newPassword || !confirmPassword) {
+      toast.error('请填写完整信息')
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error('两次密码不一致')
+      return
+    }
+    if (newPassword.length < 6) {
+      toast.error('密码至少6位')
+      return
+    }
+    try {
+      await authApi.changePassword(passwordCode, newPassword)
+      setShowChangePassword(false)
+      setPasswordCode('')
+      setNewPassword('')
+      setConfirmPassword('')
+      toast.success('密码修改成功，请重新登录')
+      handleLogout()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '修改失败')
+    }
   }
 
   if (!user) return null
 
   return (
     <div className="profile-page">
+      {/* 退出登录确认弹窗 */}
+      {showLogoutConfirm && (
+        <ConfirmModal
+          title="退出登录"
+          message="确定要退出当前账号吗？"
+          confirmText="退出"
+          cancelText="取消"
+          danger
+          onConfirm={handleLogout}
+          onCancel={() => setShowLogoutConfirm(false)}
+        />
+      )}
+
+      {/* 注销账户确认弹窗 */}
+      {showDeleteConfirm && (
+        <ConfirmModal
+          title="注销账户"
+          message="注销后账户数据将被永久删除，无法恢复。确定要注销吗？"
+          confirmText="确认注销"
+          cancelText="取消"
+          danger
+          onConfirm={handleDeleteAccount}
+          onCancel={() => setShowDeleteConfirm(false)}
+        />
+      )}
+
+      {/* 修改邮箱弹窗 */}
+      {showChangeEmail && (
+        <div className="modal-overlay" onClick={() => setShowChangeEmail(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <h3>修改邮箱</h3>
+            <p className="modal-tip">当前邮箱：{user.email}</p>
+            <div className="modal-form">
+              <input
+                type="email"
+                placeholder="新邮箱地址"
+                value={newEmail}
+                onChange={e => setNewEmail(e.target.value)}
+              />
+              <div className="code-input-row">
+                <input
+                  type="text"
+                  placeholder="验证码"
+                  value={emailCode}
+                  onChange={e => setEmailCode(e.target.value)}
+                />
+                <button
+                  className="send-code-btn"
+                  onClick={handleSendCode}
+                  disabled={sendingCode || countdown > 0}
+                >
+                  {countdown > 0 ? `${countdown}s` : '发送验证码'}
+                </button>
+              </div>
+            </div>
+            <div className="modal-actions">
+              <button className="cancel-btn" onClick={() => setShowChangeEmail(false)}>取消</button>
+              <button className="confirm-btn" onClick={handleChangeEmail}>确认修改</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 修改密码弹窗 */}
+      {showChangePassword && (
+        <div className="modal-overlay" onClick={() => setShowChangePassword(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <h3>修改密码</h3>
+            <p className="modal-tip">验证码将发送到：{user.email}</p>
+            <div className="modal-form">
+              <div className="code-input-row">
+                <input
+                  type="text"
+                  placeholder="邮箱验证码"
+                  value={passwordCode}
+                  onChange={e => setPasswordCode(e.target.value)}
+                />
+                <button
+                  className="send-code-btn"
+                  onClick={handleSendPasswordCode}
+                  disabled={passwordCountdown > 0}
+                >
+                  {passwordCountdown > 0 ? `${passwordCountdown}s` : '获取验证码'}
+                </button>
+              </div>
+              <input
+                type="password"
+                placeholder="新密码（至少6位）"
+                value={newPassword}
+                onChange={e => setNewPassword(e.target.value)}
+              />
+              <input
+                type="password"
+                placeholder="确认新密码"
+                value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)}
+              />
+            </div>
+            <div className="modal-actions">
+              <button className="cancel-btn" onClick={() => setShowChangePassword(false)}>取消</button>
+              <button className="confirm-btn" onClick={handleChangePassword}>确认修改</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 编辑用户弹窗 */}
       {showEditModal && (
         <EditUserModal
@@ -186,7 +389,7 @@ function Profile() {
 
       <section className="user-card">
         <div className="user-avatar">
-          <img src={user.avatar} alt="头像" />
+          <img src={user.avatar || DEFAULT_AVATAR} alt="头像" />
           <button className="edit-avatar" onClick={() => setShowAvatarUpload(true)}>
             <Edit3 size={14} strokeWidth={1.5} />
           </button>
@@ -229,7 +432,7 @@ function Profile() {
           onClick={() => navigate('/myposts')}
         >
           <h3>
-            <UserCircle size={18} strokeWidth={1.5} />
+            <StickyNote size={18} strokeWidth={1.5} />
             我的发布
           </h3>
           <ChevronRight
@@ -275,37 +478,18 @@ function Profile() {
         )}
       </section>
 
-      {/* 收藏夹 */}
+      {/* 收藏夹 - 跳转到收藏帖子页面 */}
       <section className="profile-section">
         <div
           className="section-header clickable"
-          onClick={() => setActiveSection(activeSection === 'folders' ? null : 'folders')}
+          onClick={() => navigate('/starred')}
         >
           <h3>
-            <FolderHeart size={18} strokeWidth={1.5} />
-            我的收藏夹
+            <Star size={18} strokeWidth={1.5} />
+            我的收藏
           </h3>
-          <ChevronRight
-            size={18}
-            strokeWidth={1.5}
-            className={activeSection === 'folders' ? 'rotated' : ''}
-          />
+          <ChevronRight size={18} strokeWidth={1.5} />
         </div>
-        {activeSection === 'folders' && (
-          <div className="folder-list">
-            {folders.length === 0 ? (
-              <div className="empty-tip">暂无收藏夹，去翻译页面创建吧～</div>
-            ) : (
-              folders.map((folder) => (
-                <div key={folder.id} className="folder-item">
-                  <FolderHeart size={20} strokeWidth={1.5} />
-                  <span className="folder-name">{folder.name}</span>
-                  <span className="folder-count">{folder.imageCount}张</span>
-                </div>
-              ))
-            )}
-          </div>
-        )}
       </section>
 
       {/* 个人信息 */}
@@ -402,20 +586,45 @@ function Profile() {
               <span>清除缓存</span>
               <ChevronRight size={16} strokeWidth={1.5} />
             </button>
-            <button className="settings-item">
-              <span>隐私设置</span>
-              <ChevronRight size={16} strokeWidth={1.5} />
-            </button>
+            <div className="settings-group">
+              <div
+                className="settings-item expandable"
+                onClick={() => setActiveSection('privacy')}
+              >
+                <span> 隐私设置</span>
+                <ChevronRight size={16} strokeWidth={1.5} />
+              </div>
+            </div>
             <button className="settings-item" onClick={()=>navigate('/aboutus')}>
               <span>关于我们</span>
               <ChevronRight size={16} strokeWidth={1.5} />
             </button>
-            <button className="settings-item" onClick={()=>navigate('/useragreement')}>
+            <button className="settings-item" onClick={()=>navigate('/privacypolicy')}>
               <span>用户协议</span>
               <ChevronRight size={16} strokeWidth={1.5} />
             </button>
-            <button className="settings-item logout" onClick={handleLogout}>
+            <button className="settings-item logout" onClick={() => setShowLogoutConfirm(true)}>
               <span>退出登录</span>
+            </button>
+          </div>
+        )}
+        {activeSection === 'privacy' && (
+          <div className="settings-list privacy-settings">
+            <button className="settings-item back-item" onClick={() => setActiveSection('settings')}>
+              <ChevronRight size={16} strokeWidth={1.5} className="back-icon" />
+              <span>返回设置</span>
+            </button>
+            <button className="settings-item" onClick={() => setShowChangeEmail(true)}>
+              <span><Mail size={16} /> 修改邮箱</span>
+              <ChevronRight size={16} strokeWidth={1.5} />
+            </button>
+            <button className="settings-item" onClick={() => setShowChangePassword(true)}>
+              <span><KeyRound size={16} /> 修改密码</span>
+              <ChevronRight size={16} strokeWidth={1.5} />
+            </button>
+            <button className="settings-item danger" onClick={() => setShowDeleteConfirm(true)}>
+              <span><UserX size={16} /> 注销账户</span>
+              <ChevronRight size={16} strokeWidth={1.5} />
             </button>
           </div>
         )}

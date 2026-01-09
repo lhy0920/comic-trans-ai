@@ -15,11 +15,14 @@ const ComicReader = lazy(() => import('./pages/ComicReader'))
 const Profile = lazy(() => import('./pages/Profile'))
 const Login = lazy(() => import('./pages/Login'))
 const Register = lazy(() => import('./pages/Register'))
-const Community = lazy(() => import('./pages/community'))
+const Community = lazy(() => import('./pages/Community'))
 const PublishPost = lazy(() => import('./pages/PublishPost'))
 const Myposts = lazy(() => import('./pages/Myposts'))
 const FollowList = lazy(() => import('./pages/FollowList'))
-
+const UserSpace = lazy(() => import('./pages/UserSpace'))
+const Mail = lazy(() => import('./pages/Mail'))
+const PrivacyPolicy = lazy(()=> import ('./pages/PrivacyPolicy'))
+const StarredPosts = lazy(() => import('./pages/StarredPosts'))
 // 加载中组件
 const PageLoading = () => (
   <div className="page-loading">
@@ -57,6 +60,9 @@ function App() {
           <Route path="/register" element={
             <AuthGuard requireAuth={false}><Register /></AuthGuard>
           } />
+          <Route path="/privacypolicy" element={
+            <AuthGuard requireAuth={true}><PrivacyPolicy /></AuthGuard>
+          } />
           
           {/* 需要登录的页面 */}
           <Route path="/" element={
@@ -83,6 +89,9 @@ function App() {
           <Route path="/myposts" element={
             <AuthGuard><Myposts /></AuthGuard>
           } />
+          <Route path="/user/:userId" element={
+            <AuthGuard><UserSpace /></AuthGuard>
+          } />
           <Route path="/following/:userId?" element={
             <AuthGuard><FollowList /></AuthGuard>
           } />
@@ -91,6 +100,12 @@ function App() {
           } />
           <Route path="/comic/:id/read/:chapterId" element={
             <AuthGuard><ComicReader /></AuthGuard>
+          } />
+          <Route path="/mail" element={
+            <AuthGuard><Mail /></AuthGuard>
+          } />
+          <Route path="/starred" element={
+            <AuthGuard><StarredPosts /></AuthGuard>
           } />
         </Routes>
       </Suspense>

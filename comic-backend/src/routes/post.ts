@@ -61,22 +61,51 @@ const formatAvatar = (avatar: string | undefined): string => {
   return `${baseUrl}${avatar}`
 }
 
-// 获取帖子列表
+// 获取帖子列表（带权限过滤）
 router.get('/', auth, async (req, res) => {
   try {
-    const userId = (req as AuthRequest).userId
+    const userId = (req as AuthRequest).userId!
     const { page = 1, limit = 10 } = req.query
     const skip = (Number(page) - 1) * Number(limit)
 
-    const posts = await Post.find({})
+    // 获取当前用户的关注列表
+    const currentUser = await User.findById(userId)
+    const followingIds = currentUser?.following.map(id => id.toString()) || []
+
+    // 获取所有帖子，然后在内存中过滤
+    // 这样可以正确处理复杂的权限逻辑
+    const allPosts = await Post.find({})
       .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(Number(limit))
       .populate('author', 'username nickname avatar')
       .populate('comments.author', 'username nickname avatar')
       .lean()
 
-    const formattedPosts = posts.map(post => ({
+    // 权限过滤
+    const filteredPosts = allPosts.filter(post => {
+      const authorId = (post.author as any)._id.toString()
+      const visibility = post.visibility || 'public'
+
+      // 自己的帖子都可见
+      if (authorId === userId) return true
+
+      // 公开帖子所有人可见
+      if (visibility === 'public') return true
+
+      // 仅粉丝可见：只有关注了作者的人可见
+      if (visibility === 'followers') {
+        return followingIds.includes(authorId)
+      }
+
+      // 仅自己可见：他人看不到
+      if (visibility === 'private') return false
+
+      return true
+    })
+
+    // 分页
+    const paginatedPosts = filteredPosts.slice(skip, skip + Number(limit))
+
+    const formattedPosts = paginatedPosts.map(post => ({
       id: post._id,
       author: {
         id: (post.author as any)._id,
@@ -84,6 +113,7 @@ router.get('/', auth, async (req, res) => {
         nickname: (post.author as any).nickname,
         avatar: formatAvatar((post.author as any).avatar)
       },
+      title: post.title || '',
       content: post.content,
       images: post.images.map(img => `${process.env.BASE_URL || 'http://localhost:5000'}/uploads/${img}`),
       tags: post.tags,
@@ -111,7 +141,7 @@ router.get('/', auth, async (req, res) => {
       time: formatTime(post.createdAt)
     }))
 
-    const total = await Post.countDocuments({})
+    const total = filteredPosts.length
 
     res.json({
       success: true,
@@ -150,6 +180,7 @@ router.get('/:id', auth, async (req, res) => {
         nickname: (post.author as any).nickname,
         avatar: formatAvatar((post.author as any).avatar)
       },
+      title: post.title || '',
       content: post.content,
       images: post.images.map(img => `${process.env.BASE_URL || 'http://localhost:5000'}/uploads/${img}`),
       tags: post.tags,
@@ -187,8 +218,12 @@ router.get('/:id', auth, async (req, res) => {
 router.post('/', auth, upload.array('images', 9), async (req, res) => {
   try {
     const userId = (req as AuthRequest).userId
-    const { content, tags, visibility } = req.body
+    const { title, content, tags, visibility } = req.body
     const files = req.files as Express.Multer.File[]
+
+    if (!title || title.trim().length === 0) {
+      return res.status(400).json({ success: false, message: '标题不能为空' })
+    }
 
     if (!content || content.trim().length === 0) {
       return res.status(400).json({ success: false, message: '内容不能为空' })
@@ -200,6 +235,7 @@ router.post('/', auth, upload.array('images', 9), async (req, res) => {
 
     const post = new Post({
       author: userId,
+      title: title.trim(),
       content: content.trim(),
       images,
       tags: parsedTags,
@@ -482,15 +518,38 @@ router.post('/:postId/comments/:commentId/like', auth, async (req, res) => {
   }
 })
 
-// 获取用户的帖子
+// 获取用户的帖子（带权限过滤，用于查看他人空间）
 router.get('/user/:userId', auth, async (req, res) => {
   try {
-    const currentUserId = (req as AuthRequest).userId
+    const currentUserId = (req as AuthRequest).userId!
     const { userId } = req.params
     const { page = 1, limit = 10 } = req.query
     const skip = (Number(page) - 1) * Number(limit)
 
-    const posts = await Post.find({ author: userId })
+    // 检查当前用户是否关注了目标用户
+    const currentUser = await User.findById(currentUserId)
+    const isFollowing = currentUser?.following.some(id => id.toString() === userId) || false
+
+    // 构建查询条件：根据关注状态过滤帖子
+    // - 公开帖子：所有人可见
+    // - 仅粉丝可见：只有关注了作者的人可见
+    // - 仅自己可见：只有作者本人可见（这里不显示）
+    let visibilityFilter: any
+    if (currentUserId === userId) {
+      // 查看自己的帖子，显示所有
+      visibilityFilter = {}
+    } else if (isFollowing) {
+      // 已关注，可以看公开和仅粉丝可见的帖子
+      visibilityFilter = { visibility: { $in: ['public', 'followers'] } }
+    } else {
+      // 未关注，只能看公开帖子
+      visibilityFilter = { visibility: 'public' }
+    }
+
+    const posts = await Post.find({ 
+      author: userId,
+      ...visibilityFilter
+    })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(Number(limit))
@@ -499,6 +558,7 @@ router.get('/user/:userId', auth, async (req, res) => {
 
     const formattedPosts = posts.map(post => ({
       id: post._id,
+      title: post.title || '',
       content: post.content,
       images: post.images.map(img => `${process.env.BASE_URL || 'http://localhost:5000'}/uploads/${img}`),
       tags: post.tags,
@@ -511,7 +571,10 @@ router.get('/user/:userId', auth, async (req, res) => {
       time: formatTime(post.createdAt)
     }))
 
-    const total = await Post.countDocuments({ author: userId })
+    const total = await Post.countDocuments({ 
+      author: userId,
+      ...visibilityFilter
+    })
 
     res.json({
       success: true,
@@ -551,6 +614,7 @@ router.get('/starred/list', auth, async (req, res) => {
         nickname: (post.author as any).nickname,
         avatar: formatAvatar((post.author as any).avatar)
       },
+      title: post.title || '',
       content: post.content,
       images: post.images.map(img => `${process.env.BASE_URL || 'http://localhost:5000'}/uploads/${img}`),
       tags: post.tags,
@@ -583,7 +647,7 @@ router.get('/starred/list', auth, async (req, res) => {
 router.put('/:id', auth, upload.array('images', 9), async (req, res) => {
   try {
     const userId = (req as AuthRequest).userId
-    const { content, tags, visibility, existingImages } = req.body
+    const { title, content, tags, visibility, existingImages } = req.body
     const files = req.files as Express.Multer.File[]
 
     const post = await Post.findById(req.params.id)
@@ -596,6 +660,7 @@ router.put('/:id', auth, upload.array('images', 9), async (req, res) => {
     }
 
     // 更新内容
+    if (title) post.title = title.trim()
     if (content) post.content = content.trim()
     if (tags) post.tags = typeof tags === 'string' ? JSON.parse(tags) : tags
     if (visibility && ['public', 'followers', 'private'].includes(visibility)) {
@@ -675,6 +740,7 @@ router.get('/my/list', auth, async (req, res) => {
 
     const formattedPosts = posts.map(post => ({
       id: post._id,
+      title: post.title || '',
       content: post.content,
       images: post.images.map(img => `${process.env.BASE_URL || 'http://localhost:5000'}/uploads/${img}`),
       tags: post.tags,

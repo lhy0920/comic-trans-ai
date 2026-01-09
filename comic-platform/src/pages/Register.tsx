@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { Sparkles, Mail, Lock, User, Eye, EyeOff, Shield } from 'lucide-react'
+import { Sparkles, Mail, Lock, User, Eye, EyeOff, Shield, X } from 'lucide-react'
 import { authApi } from '../services/api'
+import SliderCaptcha from '../components/SliderCaptcha'
 import './Login.css'
 
 function Register() {
@@ -16,6 +17,7 @@ function Register() {
   const [sendingCode, setSendingCode] = useState(false)
   const [countdown, setCountdown] = useState(0)
   const [error, setError] = useState('')
+  const [showCaptchaModal, setShowCaptchaModal] = useState(false)
 
   // 倒计时
   useEffect(() => {
@@ -84,6 +86,13 @@ function Register() {
       return
     }
 
+    // 显示人机验证弹窗
+    setShowCaptchaModal(true)
+  }
+
+  // 验证成功后执行注册
+  const handleCaptchaSuccess = async () => {
+    setShowCaptchaModal(false)
     setLoading(true)
 
     try {
@@ -194,6 +203,24 @@ function Register() {
           已有账号？<Link to="/login">立即登录</Link>
         </p>
       </div>
+
+      {/* 人机验证弹窗 */}
+      {showCaptchaModal && (
+        <div className="captcha-modal-overlay" onClick={() => setShowCaptchaModal(false)}>
+          <div className="captcha-modal" onClick={e => e.stopPropagation()}>
+            <div className="captcha-modal-header">
+              <h3>安全验证</h3>
+              <button className="captcha-close-btn" onClick={() => setShowCaptchaModal(false)}>
+                <X size={18} />
+              </button>
+            </div>
+            <p className="captcha-modal-desc">请完成以下验证以继续注册</p>
+            <SliderCaptcha 
+              onSuccess={handleCaptchaSuccess}
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

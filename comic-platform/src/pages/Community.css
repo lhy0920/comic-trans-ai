@@ -284,11 +284,26 @@
     border: 2px solid var(--light-pink);
 }
 
+.post-avatar.clickable {
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.post-avatar.clickable:hover {
+    border-color: var(--primary-pink);
+    transform: scale(1.05);
+}
+
 .post-user-info {
     flex: 1;
     display: flex;
     flex-direction: column;
     gap: 3px;
+    cursor: pointer;
+}
+
+.post-user-info:hover .post-username {
+    color: var(--primary-pink);
 }
 
 .post-username {
@@ -331,6 +346,14 @@
 /* 帖子内容 */
 .post-content {
     margin-bottom: 14px;
+}
+
+.post-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 10px 0;
+    line-height: 1.4;
 }
 
 .post-text {
@@ -564,6 +587,15 @@
     color: #fbbf24;
 }
 
+.action-btn.report-btn {
+    color: var(--text-secondary);
+}
+
+.action-btn.report-btn:hover {
+    background: #fef3c7;
+    color: #f59e0b;
+}
+
 /* 评论区样式 */
 .comments-section {
     margin-top: 16px;
@@ -713,6 +745,7 @@
     min-width: 36px;
     border-radius: 50%;
     object-fit: cover;
+    cursor: pointer;
 }
 
 .comment-body {
@@ -1147,4 +1180,220 @@
 
 .empty-state p {
     margin: 0;
+}
+
+
+/* 分享弹窗 */
+.share-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+    animation: fadeIn 0.2s ease;
+}
+
+.share-modal {
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    width: 100%;
+    max-width: 400px;
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.share-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--light-pink);
+}
+
+.share-modal-header h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.share-preview {
+    padding: 16px 20px;
+    background: var(--light-pink);
+    margin: 16px;
+    border-radius: var(--radius-md);
+}
+
+.share-preview h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 8px 0;
+    line-height: 1.4;
+}
+
+.share-preview p {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin: 0;
+    line-height: 1.5;
+}
+
+.share-link-section {
+    padding: 0 20px 16px;
+}
+
+.share-link-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: #f5f5f5;
+    border-radius: var(--radius-md);
+    border: 1px solid #e0e0e0;
+}
+
+.share-link-box svg {
+    color: var(--text-secondary);
+    flex-shrink: 0;
+}
+
+.share-link-text {
+    flex: 1;
+    font-size: 12px;
+    color: var(--text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.copy-link-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    background: var(--gradient-main);
+    color: white;
+    border: none;
+    border-radius: 14px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.copy-link-btn:hover:not(:disabled) {
+    transform: scale(1.05);
+}
+
+.copy-link-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.share-platforms {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    padding: 16px 20px;
+}
+
+.share-platform-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.share-platform-btn:hover {
+    transform: translateY(-2px);
+}
+
+.platform-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    background: var(--light-pink);
+    transition: all 0.2s;
+}
+
+.share-platform-btn:hover .platform-icon {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.share-platform-btn span {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+/* 平台图标颜色 - 简约柔和风格 */
+.system-icon {
+    background: var(--light-pink) !important;
+    color: var(--primary-pink) !important;
+}
+
+.qq-icon {
+    background: var(--light-blue) !important;
+    color: var(--primary-blue) !important;
+}
+
+.wechat-icon {
+    background: #e8f5e9 !important;
+    color: #81c784 !important;
+}
+
+.weibo-icon {
+    background: #fff3e0 !important;
+    color: #ffb74d !important;
+}
+
+.share-tip {
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-secondary);
+    padding: 0 20px 20px;
+    margin: 0;
+}
+
+/* 移动端分享弹窗适配 */
+@media (max-width: 500px) {
+    .share-modal {
+        max-width: 100%;
+        margin: 0 16px;
+    }
+    
+    .share-platforms {
+        gap: 12px;
+    }
+    
+    .platform-icon {
+        width: 44px;
+        height: 44px;
+        font-size: 18px;
+    }
 }

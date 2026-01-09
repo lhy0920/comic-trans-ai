@@ -270,4 +270,132 @@ router.post('/cover', auth, upload.single('cover'), async (req: AuthRequest, res
   }
 })
 
+// 获取指定用户的公开信息
+router.get('/user/:userId', auth, async (req: AuthRequest, res: Response) => {
+  try {
+    const { userId } = req.params
+    const user = await User.findById(userId).select('-password')
+    
+    if (!user) {
+      return res.status(404).json({ success: false, message: '用户不存在' })
+    }
+
+    const baseUrl = process.env.BASE_URL || 'http://localhost:5000'
+    const avatarUrl = user.avatar 
+      ? (user.avatar.startsWith('http') ? user.avatar : `${baseUrl}${user.avatar}`)
+      : ''
+    const coverUrl = user.cover 
+      ? (user.cover.startsWith('http') ? user.cover : `${baseUrl}${user.cover}`)
+      : ''
+
+    res.json({
+      success: true,
+      user: {
+        id: user._id,
+        username: user.username,
+        nickname: user.nickname,
+        avatar: avatarUrl,
+        cover: coverUrl,
+        signature: user.signature
+      }
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, message: '获取用户信息失败' })
+  }
+})
+
+// 修改邮箱
+router.post('/change-email', auth, async (req: AuthRequest, res: Response) => {
+  try {
+    const { newEmail, code } = req.body
+
+    if (!newEmail || !code) {
+      return res.status(400).json({ message: '请填写完整信息' })
+    }
+
+    if (!validateEmail(newEmail)) {
+      return res.status(400).json({ message: '邮箱格式不正确' })
+    }
+
+    // 验证验证码
+    const stored = codeStore.get(newEmail)
+    if (!stored) {
+      return res.status(400).json({ message: '请先获取验证码' })
+    }
+    if (Date.now() > stored.expires) {
+      codeStore.delete(newEmail)
+      return res.status(400).json({ message: '验证码已过期' })
+    }
+    if (stored.code !== code) {
+      return res.status(400).json({ message: '验证码错误' })
+    }
+
+    // 检查邮箱是否已被使用
+    const existingUser = await User.findOne({ email: newEmail })
+    if (existingUser) {
+      return res.status(400).json({ message: '该邮箱已被使用' })
+    }
+
+    // 更新邮箱
+    await User.findByIdAndUpdate(req.userId, { email: newEmail })
+    codeStore.delete(newEmail)
+
+    res.json({ success: true, message: '邮箱修改成功' })
+  } catch (error) {
+    res.status(500).json({ message: '修改邮箱失败' })
+  }
+})
+
+// 修改密码（使用邮箱验证码）
+router.post('/change-password', auth, async (req: AuthRequest, res: Response) => {
+  try {
+    const { code, newPassword } = req.body
+
+    if (!code || !newPassword) {
+      return res.status(400).json({ message: '请填写完整信息' })
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: '新密码至少6位' })
+    }
+
+    const user = await User.findById(req.userId)
+    if (!user) {
+      return res.status(404).json({ message: '用户不存在' })
+    }
+
+    // 验证验证码（发送到用户当前邮箱的）
+    const stored = codeStore.get(user.email)
+    if (!stored) {
+      return res.status(400).json({ message: '请先获取验证码' })
+    }
+    if (Date.now() > stored.expires) {
+      codeStore.delete(user.email)
+      return res.status(400).json({ message: '验证码已过期' })
+    }
+    if (stored.code !== code) {
+      return res.status(400).json({ message: '验证码错误' })
+    }
+
+    // 更新密码
+    user.password = newPassword
+    await user.save()
+    codeStore.delete(user.email)
+
+    res.json({ success: true, message: '密码修改成功' })
+  } catch (error) {
+    res.status(500).json({ message: '修改密码失败' })
+  }
+})
+
+// 注销账户
+router.delete('/delete-account', auth, async (req: AuthRequest, res: Response) => {
+  try {
+    await User.findByIdAndDelete(req.userId)
+    res.json({ success: true, message: '账户已注销' })
+  } catch (error) {
+    res.status(500).json({ message: '注销账户失败' })
+  }
+})
+
 export default router

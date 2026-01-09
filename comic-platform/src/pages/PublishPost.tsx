@@ -39,6 +39,7 @@ interface FollowUser {
 interface EditModeState {
     editMode: boolean
     postId: string
+    title: string
     content: string
     images: string[]
     tags: string[]
@@ -63,6 +64,7 @@ function PublishPost() {
     const editData = location.state as EditModeState | null;
     const isEditMode = editData?.editMode || false;
     
+    const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
     const [images, setImages] = useState<ImageItem[]>([]);
     const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -79,6 +81,7 @@ function PublishPost() {
     // 初始化编辑模式数据
     useEffect(() => {
         if (isEditMode && editData) {
+            setTitle(editData.title || '');
             setContent(editData.content || '');
             setSelectedTags(editData.tags || []);
             setVisibility(editData.visibility || 'public');
@@ -270,6 +273,11 @@ function PublishPost() {
 
     // 发布或更新帖子
     const handleSubmit = async () => {
+        if (!title.trim()) {
+            toast.warning('请输入标题');
+            return;
+        }
+
         if (!content.trim()) {
             toast.warning('请输入内容');
             return;
@@ -287,7 +295,8 @@ function PublishPost() {
                 const existingImageUrls = images.filter(img => img.type === 'url').map(img => img.url!);
                 
                 await myPostApi.updatePostWithImages(
-                    editData.postId, 
+                    editData.postId,
+                    title.trim(),
                     processedContent, 
                     selectedTags, 
                     visibility,
@@ -300,7 +309,7 @@ function PublishPost() {
             } else {
                 // 新建模式：发布帖子
                 const imageFiles = images.filter(img => img.type === 'file').map(img => img.file!);
-                await postApi.createPost(processedContent, imageFiles, selectedTags, visibility);
+                await postApi.createPost(title.trim(), processedContent, imageFiles, selectedTags, visibility);
                 
                 toast.success('发布成功！');
                 navigate('/community');
@@ -321,7 +330,7 @@ function PublishPost() {
 
     // 返回
     const handleBack = () => {
-        if (content.trim() || images.length > 0) {
+        if (title.trim() || content.trim() || images.length > 0) {
             if (window.confirm('确定要放弃编辑吗？')) {
                 images.forEach(img => {
                     if (img.type === 'file') {
@@ -346,7 +355,7 @@ function PublishPost() {
                 <button 
                     className="submit-btn"
                     onClick={handleSubmit}
-                    disabled={isSubmitting || !content.trim()}
+                    disabled={isSubmitting || !title.trim() || !content.trim()}
                 >
                     {isSubmitting ? (isEditMode ? '保存中...' : '发布中...') : (isEditMode ? '保存' : '发布')}
                     {!isSubmitting && <Send size={16} strokeWidth={1.5} />}
@@ -355,6 +364,19 @@ function PublishPost() {
 
             {/* 内容区 */}
             <main className="publish-content">
+                {/* 标题输入 */}
+                <div className="title-input-section">
+                    <input
+                        type="text"
+                        className="title-input"
+                        placeholder="请输入标题（必填）"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        maxLength={100}
+                    />
+                    <span className="title-count">{title.length}/100</span>
+                </div>
+
                 {/* 文字输入 */}
                 <div className="content-input-section">
                     <textarea
@@ -454,7 +476,7 @@ function PublishPost() {
                                         setShowAtPicker(false);
                                     }}
                                 >
-                                    {getVisibilityIcon()}
+                                    {/* {getVisibilityIcon()} */}
                                     <span className="visibility-text">{getVisibilityText()}</span>
                                 </button>
                                 {showVisibilityPicker && (

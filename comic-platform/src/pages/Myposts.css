@@ -286,6 +286,15 @@
   font-weight: 500;
 }
 
+/* 帖子标题 */
+.post-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 8px 0;
+  line-height: 1.4;
+}
+
 /* 帖子内容 */
 .post-content {
   font-size: 0.95rem;

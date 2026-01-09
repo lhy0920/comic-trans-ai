@@ -24,7 +24,7 @@ const userSchema = new Schema<IUser>({
   password: { type: String, required: true },
   avatar: { type: String, default: '' },
   cover: { type: String, default: '' },
-  nickname: { type: String, default: '私斋蒸鹅心' },
+  nickname: { type: String, default: '私斋' },
   signature: { type: String, default: '' },
   gender: { type: String, default: '' },
   birthday: { type: String, default: '' },

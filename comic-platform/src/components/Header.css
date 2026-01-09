@@ -86,12 +86,32 @@
   align-items: center;
   justify-content: center;
   color: var(--primary-pink);
+  position: relative;
 }
 
 .app-header .icon-btn:hover {
   background: var(--primary-pink);
   color: var(--white);
   transform: scale(1.05);
+}
+
+/* 未读消息数 */
+.app-header .mail-btn .unread-dot {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  background: #ef4444;
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--white);
 }
 
 .app-header .avatar-btn {

@@ -69,6 +69,24 @@ export const authApi = {
 
   // 获取当前用户
   getMe: () => request('/auth/me'),
+
+  // 修改邮箱
+  changeEmail: (newEmail: string, code: string) =>
+    request('/auth/change-email', {
+      method: 'POST',
+      body: JSON.stringify({ newEmail, code }),
+    }),
+
+  // 修改密码（使用邮箱验证码）
+  changePassword: (code: string, newPassword: string) =>
+    request('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ code, newPassword }),
+    }),
+
+  // 注销账户
+  deleteAccount: () =>
+    request('/auth/delete-account', { method: 'DELETE' }),
 }
 
 /**
@@ -315,8 +333,9 @@ export const postApi = {
   getPost: (id: string) => request(`/posts/${id}`),
 
   // 发布帖子
-  createPost: async (content: string, images: File[], tags: string[], visibility: 'public' | 'followers' | 'private' = 'public') => {
+  createPost: async (title: string, content: string, images: File[], tags: string[], visibility: 'public' | 'followers' | 'private' = 'public') => {
     const formData = new FormData()
+    formData.append('title', title)
     formData.append('content', content)
     formData.append('tags', JSON.stringify(tags))
     formData.append('visibility', visibility)
@@ -427,7 +446,8 @@ export const myPostApi = {
 
   // 修改帖子（带图片）
   updatePostWithImages: async (
-    id: string, 
+    id: string,
+    title: string,
     content: string, 
     tags: string[], 
     visibility: 'public' | 'followers' | 'private',
@@ -435,6 +455,7 @@ export const myPostApi = {
     existingImageUrls: string[]
   ) => {
     const formData = new FormData()
+    formData.append('title', title)
     formData.append('content', content)
     formData.append('tags', JSON.stringify(tags))
     formData.append('visibility', visibility)
@@ -490,4 +511,81 @@ export const shortLinkApi = {
   // 删除短链接
   delete: (hash: string) =>
     request(`/shortlink/${hash}`, { method: 'DELETE' }),
+}
+
+/**
+ * 用户空间 API（查看他人主页）
+ */
+export const userSpaceApi = {
+  // 获取用户公开信息
+  getUserInfo: (userId: string) =>
+    request(`/auth/user/${userId}`),
+
+  // 获取用户帖子（带权限过滤）
+  getUserPosts: (userId: string, page = 1, limit = 50) => {
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) })
+    return request(`/posts/user/${userId}?${params}`)
+  },
+}
+
+
+/**
+ * 消息 API
+ */
+export const messageApi = {
+  // 获取会话列表
+  getConversations: () => request('/messages/conversations'),
+
+  // 获取聊天记录
+  getChatHistory: (userId: string, page = 1, limit = 30) => {
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) })
+    return request(`/messages/chat/${userId}?${params}`)
+  },
+
+  // 发送私信（HTTP 方式，WebSocket 更推荐）
+  sendMessage: (receiverId: string, content: string, type: 'text' | 'image' = 'text') =>
+    request('/messages/send', {
+      method: 'POST',
+      body: JSON.stringify({ receiverId, content, type }),
+    }),
+
+  // 获取通知列表
+  getNotifications: (page = 1, limit = 20, type?: string) => {
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) })
+    if (type) params.append('type', type)
+    return request(`/messages/notifications?${params}`)
+  },
+
+  // 标记通知已读
+  markNotificationsRead: (ids?: string[]) =>
+    request('/messages/notifications/read', {
+      method: 'PUT',
+      body: JSON.stringify({ ids }),
+    }),
+
+  // 获取未读数量
+  getUnreadCount: () => request('/messages/unread-count'),
+
+  // 删除通知
+  deleteNotification: (id: string) =>
+    request(`/messages/notifications/${id}`, { method: 'DELETE' }),
+}
+
+/**
+ * 举报 API
+ */
+export const reportApi = {
+  // 举报帖子
+  reportPost: (postId: string, reason: string, description?: string) =>
+    request('/reports/post', {
+      method: 'POST',
+      body: JSON.stringify({ postId, reason, description }),
+    }),
+
+  // 举报用户
+  reportUser: (userId: string, reason: string, description?: string) =>
+    request('/reports/user', {
+      method: 'POST',
+      body: JSON.stringify({ userId, reason, description }),
+    }),
 }
