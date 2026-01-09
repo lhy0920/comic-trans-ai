@@ -1,0 +1,249 @@
+.starred-posts-page {
+  min-height: 100vh;
+  background: var(--gradient-soft);
+  padding-bottom: 80px;
+}
+
+.starred-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: var(--white);
+  box-shadow: var(--shadow-sm);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.starred-header h1 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.starred-header .back-btn {
+  width: 40px;
+  height: 40px;
+  background: var(--light-pink);
+  border: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--primary-pink);
+  transition: all 0.3s;
+}
+
+.starred-header .back-btn:hover {
+  background: var(--primary-pink);
+  color: var(--white);
+}
+
+.starred-header .placeholder {
+  width: 40px;
+}
+
+.starred-content {
+  padding: 16px;
+}
+
+.loading {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-secondary);
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  color: var(--text-secondary);
+  gap: 16px;
+}
+
+.empty svg {
+  color: var(--primary-pink);
+  opacity: 0.5;
+}
+
+.empty p {
+  font-size: 15px;
+}
+
+.empty button {
+  padding: 10px 24px;
+  background: var(--gradient-main);
+  color: var(--white);
+  border: none;
+  border-radius: 20px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.empty button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 158, 181, 0.4);
+}
+
+/* 帖子列表 */
+.post-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.post-item {
+  background: var(--white);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.post-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 16px 12px;
+  cursor: pointer;
+}
+
+.author-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.author-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.author-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.post-time {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.post-body {
+  padding: 0 16px 12px;
+}
+
+.post-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.post-content {
+  font-size: 14px;
+  color: var(--text-primary);
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* 图片网格 */
+.post-images {
+  display: grid;
+  gap: 4px;
+  margin-top: 12px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.post-images.images-1 {
+  grid-template-columns: 1fr;
+}
+
+.post-images.images-2 {
+  grid-template-columns: 1fr 1fr;
+}
+
+.post-images.images-3 {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+.post-images img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+}
+
+/* 底部 */
+.post-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-top: 1px solid var(--light-pink);
+}
+
+.post-stats {
+  display: flex;
+  gap: 16px;
+}
+
+.post-stats span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.post-stats span svg {
+  color: var(--primary-pink);
+}
+
+.unstar-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: var(--light-pink);
+  border: none;
+  border-radius: 16px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.unstar-btn:hover {
+  background: #ffccd5;
+  color: var(--primary-pink);
+}
+
+.unstar-btn svg {
+  color: var(--primary-pink);
+}
+
+/* 响应式 */
+@media (min-width: 768px) {
+  .starred-posts-page {
+    max-width: 600px;
+    margin: 0 auto;
+    padding-bottom: 40px;
+  }
+
+  .post-images.images-1 img {
+    max-height: 300px;
+    object-fit: contain;
+    background: var(--light-blue);
+  }
+}
